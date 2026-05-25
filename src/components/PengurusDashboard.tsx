@@ -253,7 +253,7 @@ export default function PengurusDashboard({
     onAddUstadz({
       nama: newUstNama,
       nip: newUstNip,
-      pesantrenSertifikasi: newUstSertifikasi || 'Pondok Pesantren Miftahul Huda',
+      pesantrenSertifikasi: newUstSertifikasi || 'TPQ AL ASYHAR & MADIN MIFTAHUL ULUM 1',
       bidangKeahlian: newUstBidang,
       noHp: newUstNoHp || '081234567899',
       tanggalMulaiTugas: newUstTanggal
@@ -1086,7 +1086,7 @@ export default function PengurusDashboard({
                     <Plus className="w-5 h-5 text-emerald-600 bg-emerald-50 rounded-lg p-0.5" />
                     Registrasi & Tambah Santri Baru
                   </h3>
-                  <p className="text-xxs text-slate-450 mb-4 font-normal">Daftarkan santri baru ke dalam database pondok pesantren Miftahul Huda.</p>
+                  <p className="text-xxs text-slate-450 mb-4 font-normal">Daftarkan santri baru ke dalam database TPQ AL ASYHAR DAN MADIN MIFTAHUL ULUM 1 SIMA MOGA PEMALANG JAWA TENGAH.</p>
 
                   {santriSuccess && (
                     <div className="bg-emerald-50 text-emerald-800 border border-emerald-250 p-3 rounded-xl mb-4 text-xs font-semibold">
@@ -1291,7 +1291,7 @@ export default function PengurusDashboard({
                 {/* 2. Panduan Kurikulum Card */}
                 <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
                   <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5 pb-2 border-b border-slate-100">
-                    📖 Standar Kurikulum Buku Qiraah & Jilid Miftahul Ulum
+                    📖 Standar Kurikulum Buku Qiraah & Jilid TPQ Al Asyhar & Madin Miftahul Ulum 1
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xxs leading-relaxed">
                     <div className="space-y-2">

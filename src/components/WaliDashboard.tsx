@@ -745,7 +745,7 @@ export default function WaliDashboard({
 
                 {/* Simulated QR Code displaying details */}
                 <div className="mx-auto border-4 border-teal-700 p-2.5 w-48 h-48 rounded-2xl bg-white flex flex-col items-center justify-center relative shadow-md">
-                  <div className="absolute top-1 left-2.5 text-[8px] font-mono text-teal-700 font-bold uppercase tracking-wider">Miftahul Ulum QRIS</div>
+                  <div className="absolute top-1 left-2.5 text-[7px] font-mono text-teal-700 font-bold uppercase tracking-wider">Al Asyhar & Madin QRIS</div>
                   {/* QR Core placeholder vector */}
                   <div className="w-36 h-36 border-2 border-slate-700 bg-slate-90 rounded p-1 flex flex-col justify-between overflow-hidden">
                     <div className="flex justify-between h-8">

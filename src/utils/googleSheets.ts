@@ -98,7 +98,7 @@ export const createSheetsReport = async (
 
   const bodyData = {
     properties: {
-      title: `Miftahul Ulum - Laporan Administrasi Pesantren (${timestamp})`
+      title: `Al Asyhar & Miftahul Ulum 1 - Laporan Administrasi (${timestamp})`
     },
     sheets: [
       { properties: { title: 'Laporan Ringkasan' } },
@@ -156,7 +156,7 @@ export const createSheetsReport = async (
     ['Tagihan SPP Terbayar', tagihanList.filter(t => t.status === 'Lunas').length, `Dari total ${tagihanList.length} tagihan terbit`],
     ['Surat Izin Diajukan', perizinanList.filter(p => p.status === 'Diajukan').length, 'Menunggu persetujuan pengurus'],
     [],
-    ['Sistem administrasi pesantren Miftahul Ulum Kediri terintegrasi langsung dengan database local cloud.']
+    ['Sistem administrasi TPQ AL ASYHAR DAN MADIN MIFTAHUL ULUM 1 SIMA MOGA PEMALANG JAWA TENGAH terintegrasi langsung dengan database local cloud.']
   ];
 
   // B. Data Santri

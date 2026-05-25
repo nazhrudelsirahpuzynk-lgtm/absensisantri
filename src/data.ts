@@ -292,7 +292,7 @@ export const initialPengumuman: PengumumanPondok[] = [
   {
     id: 'pn2',
     judul: 'Gotong Royong & Kerja bakti Kompleks Pesantren',
-    konten: 'Akan dilaksanakan kegiatan kebersihan massal di lingkungan pondok pesantren Miftahul Ulum pada hari Ahad, guna menjaga kesehatan lingkungan khususnya menghadapi musim pancaroba.',
+    konten: 'Akan dilaksanakan kegiatan kebersihan massal di lingkungan TPQ Al Asyhar & Madin Miftahul Ulum 1 Sima Moga Pemalang pada hari Ahad, guna menjaga kesehatan lingkungan khususnya menghadapi musim pancaroba.',
     tanggal: '2026-05-20',
     prioritas: 'Sedang',
     penerbit: 'Lurah Pondok'

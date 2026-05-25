@@ -31,11 +31,12 @@ export default function RoleSelector({
             <div className="bg-emerald-600 p-2 rounded-xl text-emerald-55 shadow-md flex items-center justify-center">
               <BookOpen className="w-6 h-6" id="app-logo-icon" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold font-sans tracking-tight text-emerald-100 flex items-center gap-2">
-                Miftahul Ulum <span className="text-xs bg-emerald-500/30 text-emerald-300 font-medium px-2 py-0.5 rounded-full border border-emerald-500/20">Pesantren App</span>
+            <div className="max-w-md">
+              <h1 className="text-xs sm:text-sm font-bold font-sans tracking-tight text-emerald-100 flex items-center gap-1.5">
+                TPQ AL ASYHAR & MADIN MIFTAHUL ULUM 1
+                <span className="text-[9px] bg-emerald-500/35 text-emerald-300 font-medium px-1.5 py-0.2 rounded-full border border-emerald-500/20 whitespace-nowrap">TPQ & MADIN</span>
               </h1>
-              <p className="text-xs text-emerald-300 font-mono tracking-wide">Pondok Pesantren Miftahul Ulum - Kediri</p>
+              <p className="text-[10px] text-emerald-300 font-mono tracking-tight leading-tight mt-0.5">SIMA MOGA PEMALANG JAWA TENGAH</p>
             </div>
           </div>
 

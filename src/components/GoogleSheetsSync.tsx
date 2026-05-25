@@ -121,7 +121,7 @@ export default function GoogleSheetsSync({
       if (!activeFolderId) {
         const response = await fetch(
           `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
-            "mimeType = 'application/vnd.google-apps.folder' and name = 'Pondok Pesantren Miftahul Ulum' and trashed = false"
+            "mimeType = 'application/vnd.google-apps.folder' and name = 'TPQ AL ASYHAR DAN MADIN MIFTAHUL ULUM 1' and trashed = false"
           )}&fields=files(id,name)`,
           {
             headers: { Authorization: `Bearer ${token}` }
@@ -236,7 +236,7 @@ export default function GoogleSheetsSync({
     setIsCreatingFolder(true);
     setErrorMsg(null);
     try {
-      const folderId = await createDriveFolder(token, 'Pondok Pesantren Miftahul Ulum');
+      const folderId = await createDriveFolder(token, 'TPQ AL ASYHAR DAN MADIN MIFTAHUL ULUM 1');
       setMiftahFolderId(folderId);
       localStorage.setItem('miftah_drive_folder_id', folderId);
       await loadDriveContent(token);
@@ -360,7 +360,7 @@ export default function GoogleSheetsSync({
           </span>
           <h3 className="font-sans font-bold text-slate-800 text-lg flex items-center gap-2">
             <FolderOpen className="w-6 h-6 text-emerald-600" />
-            Pusat Awansistem Miftahul Ulum
+            Pusat Awansistem TPQ AL ASYHAR & MADIN MIFTAHUL ULUM 1
           </h3>
           <p className="text-xs text-slate-500 mt-1">
             Ekspor laporan administrasi ke Google Sheets dan kelola seluruh arsip digital, surat izin, serta dokumen penting di Google Drive.
@@ -598,9 +598,9 @@ export default function GoogleSheetsSync({
                 <div className="p-8 border border-amber-200 bg-amber-50 rounded-3xl text-center space-y-4">
                   <FolderPlus className="w-12 h-12 text-amber-600 mx-auto" />
                   <div className="max-w-md mx-auto space-y-2">
-                    <h5 className="font-sans font-bold text-slate-800 text-sm">Inisialisasi Direktori Arsip Miftahul Ulum</h5>
+                    <h5 className="font-sans font-bold text-slate-800 text-sm">Inisialisasi Direktori Arsip TPQ Al Asyhar & Madin</h5>
                     <p className="text-xxs text-slate-500 leading-relaxed">
-                      Sistem belum mendeteksi Folder Khusus untuk penyimpanan Pondok Pesantren di Google Drive Anda. Kami menyarankan untuk membuat Folder terpusat agar tidak mencampuri dokumen pribadi Anda.
+                      Sistem belum mendeteksi Folder Khusus untuk penyimpanan TPQ / Madin di Google Drive Anda. Kami menyarankan untuk membuat Folder terpusat agar tidak mencampuri dokumen pribadi Anda.
                     </p>
                   </div>
                   <button
@@ -613,7 +613,7 @@ export default function GoogleSheetsSync({
                     ) : (
                       <Plus className="w-3.5 h-3.5" />
                     )}
-                    {isCreatingFolder ? 'Mempersiapkan...' : 'Buat Folder "Pondok Pesantren Miftahul Ulum"'}
+                    {isCreatingFolder ? 'Mempersiapkan...' : 'Buat Folder "TPQ AL ASYHAR DAN MADIN MIFTAHUL ULUM 1"'}
                   </button>
                 </div>
               ) : (
@@ -624,7 +624,7 @@ export default function GoogleSheetsSync({
                     </div>
                     <div>
                       <p className="text-xxs font-bold text-emerald-900 font-sans uppercase tracking-wider">Direktori Aktif Google Drive</p>
-                      <p className="text-xs font-semibold text-slate-750">Pondok Pesantren Miftahul Ulum</p>
+                      <p className="text-xs font-semibold text-slate-750">TPQ AL ASYHAR DAN MADIN MIFTAHUL ULUM 1</p>
                     </div>
                   </div>
                   <a

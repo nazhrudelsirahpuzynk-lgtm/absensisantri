@@ -1,6 +1,6 @@
 {
-  "name": "Miftahul Ulum App",
-  "description": "Sistem Informasi & Pemantauan Santri, Wali Santri, dan Pengurus Pondok Pesantren Miftahul Ulum dengan fitur pantau hafalan, jurnal ibadah, akademik, pembayaran SPP QRIS, perizinan, dan absensi digital.",
+  "name": "TPQ Al Asyhar & Madin Miftahul Ulum 1 App",
+  "description": "Sistem Informasi & Pemantauan Santri, Wali Santri, dan Pengurus TPQ AL ASYHAR DAN MADIN MIFTAHUL ULUM 1 SIMA MOGA PEMALANG JAWA TENGAH dengan fitur pantau hafalan, jurnal ibadah, akademik, pembayaran SPP QRIS, perizinan, dan absensi digital.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
