@@ -1,0 +1,6 @@
+{
+  "name": "Miftahul Ulum App",
+  "description": "Sistem Informasi & Pemantauan Santri, Wali Santri, dan Pengurus Pondok Pesantren Miftahul Ulum dengan fitur pantau hafalan, jurnal ibadah, akademik, pembayaran SPP QRIS, perizinan, dan absensi digital.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
