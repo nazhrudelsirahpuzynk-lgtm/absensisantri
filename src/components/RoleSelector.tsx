@@ -20,7 +20,17 @@ export default function RoleSelector({
   isAdminAuthenticated = false,
   onAdminLogout,
 }: RoleSelectorProps) {
-  const activeSantri = allSantri.find(s => s.id === selectedSantriId) || allSantri[0];
+  const activeSantri = allSantri.find(s => s.id === selectedSantriId) || allSantri[0] || {
+    id: 'empty-fallback-id',
+    nama: 'Belum Ada Santri',
+    nis: '00000',
+    kelas: 'Jilid 1',
+    namaWali: 'Orang Tua / Wali Contoh',
+    teleponWali: '081234567890',
+    kehadiranPercent: 100,
+    juzTerakhir: 30,
+    catatanPelanggaran: []
+  };
 
   return (
     <div className="bg-gradient-to-r from-emerald-900 to-teal-980 text-white shadow-md border-b border-emerald-800">

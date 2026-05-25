@@ -506,7 +506,17 @@ export default function App() {
   };
 
   // Active impersonated profile object
-  const activeSantri = allSantri.find(s => s.id === selectedSantriId) || allSantri[0];
+  const activeSantri = allSantri.find(s => s.id === selectedSantriId) || allSantri[0] || {
+    id: 'empty-fallback-id',
+    nama: 'Belum Ada Santri',
+    nis: '00000',
+    kelas: 'Jilid 1',
+    namaWali: 'Orang Tua / Wali Contoh',
+    teleponWali: '081234567890',
+    kehadiranPercent: 100,
+    juzTerakhir: 30,
+    catatanPelanggaran: []
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen text-slate-800 font-sans selection:bg-emerald-250 selection:text-emerald-900 pb-16">
