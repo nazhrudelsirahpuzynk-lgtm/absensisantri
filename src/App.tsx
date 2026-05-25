@@ -354,6 +354,82 @@ export default function App() {
     setKeuanganList(prev => [...prev, entry]);
   };
 
+  // Update student (santri) details
+  const handleUpdateSantri = (id: string, updatedFields: Partial<Santri>) => {
+    setAllSantri(prev =>
+      prev.map(s => {
+        if (s.id === id) {
+          return { ...s, ...updatedFields };
+        }
+        return s;
+      })
+    );
+  };
+
+  // Bulk promote students' grades or levels
+  const handleBulkPromote = (targetLevel: string, nextLevel: string) => {
+    setAllSantri(prev =>
+      prev.map(s => {
+        if (s.kelas === targetLevel) {
+          return { ...s, kelas: nextLevel };
+        }
+        return s;
+      })
+    );
+
+    const newNotif: Notifikasi = {
+      id: `notif-bulk-${Date.now()}`,
+      title: 'Kenaikan Kelas/Tingkat Massal',
+      content: `Alhamdulillah! Seluruh santri di tingkat [${targetLevel}] berhasil dinaikkan ke tingkat [${nextLevel}].`,
+      date: new Date().toISOString().split('T')[0],
+      type: 'pengumuman',
+      isRead: false
+    };
+    setNotifikasiList(prev => [newNotif, ...prev]);
+  };
+
+  // Delete student (santri) from directory
+  const handleDeleteSantri = (id: string) => {
+    const targetSantri = allSantri.find(s => s.id === id);
+    setAllSantri(prev => {
+      const filtered = prev.filter(s => s.id !== id);
+      if (selectedSantriId === id) {
+        if (filtered.length > 0) {
+          setSelectedSantriId(filtered[0].id);
+        } else {
+          setSelectedSantriId('');
+        }
+      }
+      return filtered;
+    });
+
+    const newNotif: Notifikasi = {
+      id: `notif-del-${Date.now()}`,
+      title: 'Santri Dihapus',
+      content: `Siswa ${targetSantri?.nama || 'Santri'} (NIS: ${targetSantri?.nis || '-'}) berhasil dihapus dari database.`,
+      date: new Date().toISOString().split('T')[0],
+      type: 'pengumuman',
+      isRead: false
+    };
+    setNotifikasiList(prev => [newNotif, ...prev]);
+  };
+
+  // Delete ustadz from directory
+  const handleDeleteUstadz = (id: string) => {
+    const targetUstadz = ustadzList.find(u => u.id === id);
+    setUstadzList(prev => prev.filter(u => u.id !== id));
+
+    const newNotif: Notifikasi = {
+      id: `notif-del-ust-${Date.now()}`,
+      title: 'Ustadz Dihapus',
+      content: `Ustadz ${targetUstadz?.nama || 'Pengajar'} (NIP: ${targetUstadz?.nip || '-'}) telah dihentikan tugas khidmah mengajarnya.`,
+      date: new Date().toISOString().split('T')[0],
+      type: 'pengumuman',
+      isRead: false
+    };
+    setNotifikasiList(prev => [newNotif, ...prev]);
+  };
+
   // Register new student (santri)
   const handleRegisterSantri = (newSantri: Omit<Santri, 'id' | 'kehadiranPercent' | 'catatanPelanggaran'>) => {
     // Generate unique sequential id
@@ -485,6 +561,7 @@ export default function App() {
               onAddPerizinan={handleAddPerizinan}
               onPaySPP={handlePaySPP}
               allSantri={allSantri}
+              ustadzList={ustadzList}
             />
           )}
 
@@ -510,7 +587,11 @@ export default function App() {
                 onApprovePerizinan={handleApprovePerizinan}
                 onUpdateSantriKehadiran={handleUpdateSantriKehadiran}
                 onAddSantri={handleRegisterSantri}
+                onDeleteSantri={handleDeleteSantri}
+                onUpdateSantri={handleUpdateSantri}
+                onBulkPromote={handleBulkPromote}
                 onAddUstadz={handleAddUstadz}
+                onDeleteUstadz={handleDeleteUstadz}
                 onAddPenilaianJilid={handleAddPenilaianJilid}
               />
             )

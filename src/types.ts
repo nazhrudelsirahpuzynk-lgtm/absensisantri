@@ -10,6 +10,15 @@ export interface Santri {
   kehadiranPercent: number;
   juzTerakhir: number;
   catatanPelanggaran: string[];
+  noKK?: string;           // Nomor Kartu Keluarga (16 digit)
+  nisn?: string;           // Nomor Induk Siswa Nasional (10 digit)
+  nik?: string;            // NIK Santri (16 digit)
+  tempatLahir?: string;    // Tempat lahir sesuai KK/Akte
+  tanggalLahir?: string;   // Tanggal lahir sesuai KK/Akte
+  jenisKelamin?: 'Laki-laki' | 'Perempuan';
+  alamatKK?: string;       // Alamat lengkap di KK
+  namaAyahKandung?: string;// Nama Ayah Kandung
+  namaIbuKandung?: string; // Nama Ibu Kandung
 }
 
 export interface SetoranHafalan {

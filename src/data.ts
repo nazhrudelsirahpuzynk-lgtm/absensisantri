@@ -26,7 +26,16 @@ export const initialSantri: Santri[] = [
     teleponWali: '081234567890',
     kehadiranPercent: 98,
     juzTerakhir: 3,
-    catatanPelanggaran: ['Terlambat sholat jamaah Shubuh (Teguran lisan)']
+    catatanPelanggaran: ['Terlambat sholat jamaah Shubuh (Teguran lisan)'],
+    noKK: '3327123456780001',
+    nisn: '0087654321',
+    nik: '3327120101080001',
+    tempatLahir: 'Pemalang',
+    tanggalLahir: '2008-01-01',
+    jenisKelamin: 'Laki-laki',
+    alamatKK: 'Dusun Krajan, Desa Sima, Kec. Moga, Pemalang, Jawa Tengah',
+    namaAyahKandung: 'Bapak H. Rahman Hakim',
+    namaIbuKandung: 'Ibu Hj. Aminah Rahma'
   },
   {
     id: 's2',
@@ -37,7 +46,16 @@ export const initialSantri: Santri[] = [
     teleponWali: '081298765432',
     kehadiranPercent: 95,
     juzTerakhir: 1,
-    catatanPelanggaran: []
+    catatanPelanggaran: [],
+    noKK: '3327123456780209',
+    nisn: '0091234567',
+    nik: '3327121505100003',
+    tempatLahir: 'Pemalang',
+    tanggalLahir: '2010-05-15',
+    jenisKelamin: 'Laki-laki',
+    alamatKK: 'Desa Banyumudal, Kec. Moga, Pemalang, Jawa Tengah',
+    namaAyahKandung: 'Bapak Yusuf Mansur',
+    namaIbuKandung: 'Ibu Siti Khadijah'
   },
   {
     id: 's3',
@@ -48,7 +66,16 @@ export const initialSantri: Santri[] = [
     teleponWali: '085712345678',
     kehadiranPercent: 100,
     juzTerakhir: 2,
-    catatanPelanggaran: []
+    catatanPelanggaran: [],
+    noKK: '3327123456780034',
+    nisn: '0098765432',
+    nik: '3327124408090002',
+    tempatLahir: 'Semarang',
+    tanggalLahir: '2009-08-04',
+    jenisKelamin: 'Perempuan',
+    alamatKK: 'Perumahan Sima Indah, Kec. Moga, Pemalang, Jawa Tengah',
+    namaAyahKandung: 'Bapak Ahmad Ridwan',
+    namaIbuKandung: 'Ibu Fatimah Az-Zahra'
   }
 ];
 

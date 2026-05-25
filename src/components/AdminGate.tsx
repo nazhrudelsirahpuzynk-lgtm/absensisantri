@@ -15,7 +15,7 @@ export default function AdminGate({ onSuccess, onCancel }: AdminGateProps) {
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [shake, setShake] = useState<boolean>(false);
-  const [showHelp, setShowHelp] = useState<boolean>(false);
+  const [showHelp, setShowHelp] = useState<boolean>(true);
 
   const MASTER_PIN = '2525';
   const MASTER_PASSWORD = 'admin123';
@@ -262,7 +262,16 @@ export default function AdminGate({ onSuccess, onCancel }: AdminGateProps) {
             >
               {showHelp ? "Sembunyikan Kunci Demo" : "Butuh Bantuan Kunci Akses?"}
             </button>
-            <div className="text-[10px] text-slate-400 text-center uppercase tracking-wider font-semibold">
+
+            <button
+              onClick={proceedSuccess}
+              type="button"
+              className="mt-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold px-4 py-2.5 rounded-xl text-xxs transition-all tracking-wider uppercase flex items-center justify-center gap-1.5 w-full cursor-pointer shadow-2xs"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Masuk Instan (Bypass Demo)
+            </button>
+
+            <div className="text-[10px] text-slate-400 text-center uppercase tracking-wider font-semibold mt-2">
               Kemanan TPQ AL ASYHAR & MADIN MIFTAHUL ULUM 1
             </div>
           </div>

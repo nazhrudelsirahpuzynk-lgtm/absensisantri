@@ -30,8 +30,39 @@ import {
   Clock,
   ListFilter,
   GraduationCap,
-  Phone
+  Phone,
+  Search,
+  Trash2,
+  Edit,
+  MapPin,
+  UserPlus
 } from 'lucide-react';
+
+
+const LEVEL_ORDER = [
+  "Jilid 1",
+  "Jilid 2",
+  "Jilid 3",
+  "Jilid 4",
+  "Jilid 5",
+  "Al-Qur'an 1",
+  "Al-Qur'an 2",
+  "Kelas 1 Awaliyah",
+  "Kelas 2 Awaliyah",
+  "Kelas 3 Awaliyah",
+  "Kelas 4 Awaliyah"
+];
+
+const getNextLevel = (currentLevel: string): string => {
+  const currentIndex = LEVEL_ORDER.indexOf(currentLevel);
+  if (currentIndex === -1) {
+    return "Jilid 1";
+  }
+  if (currentIndex === LEVEL_ORDER.length - 1) {
+    return "Alumni / Lulus";
+  }
+  return LEVEL_ORDER[currentIndex + 1];
+};
 
 
 interface PengurusDashboardProps {
@@ -49,7 +80,11 @@ interface PengurusDashboardProps {
   onApprovePerizinan: (perizinanId: string, approvedBy: string, approveStatus: 'Disetujui' | 'Ditolak') => void;
   onUpdateSantriKehadiran: (santriId: string, newKehadiran: number) => void;
   onAddSantri: (newSantri: Omit<Santri, 'id' | 'kehadiranPercent' | 'catatanPelanggaran'>) => void;
+  onDeleteSantri: (id: string) => void;
+  onUpdateSantri: (id: string, updatedFields: Partial<Santri>) => void;
+  onBulkPromote: (targetLevel: string, nextLevel: string) => void;
   onAddUstadz: (newUstadz: Omit<Ustadz, 'id'>) => void;
+  onDeleteUstadz: (id: string) => void;
   onAddPenilaianJilid: (newPenilaian: Omit<PenilaianJilid, 'id'>) => void;
 }
 
@@ -68,11 +103,15 @@ export default function PengurusDashboard({
   onApprovePerizinan,
   onUpdateSantriKehadiran,
   onAddSantri,
+  onDeleteSantri,
+  onUpdateSantri,
+  onBulkPromote,
   onAddUstadz,
+  onDeleteUstadz,
   onAddPenilaianJilid
 }: PengurusDashboardProps) {
   // Tabs
-  const [activeTab, setActiveTab] = useState<'stats' | 'absensi' | 'keuangan' | 'kelas' | 'ustadz' | 'sheets'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'santri' | 'absensi' | 'keuangan' | 'kelas' | 'ustadz' | 'sheets'>('stats');
   const [kelasSubTab, setKelasSubTab] = useState<'tahfidz' | 'jilid'>('tahfidz');
 
   // Keuangan Form States
@@ -123,6 +162,26 @@ export default function PengurusDashboard({
   const [newSantriJuz, setNewSantriJuz] = useState<number>(30);
   const [santriSuccess, setSantriSuccess] = useState<string>('');
 
+  // Expanded Santri Biodata States for Family Card, NIK, & NISN
+  const [newSantriNoKK, setNewSantriNoKK] = useState<string>('');
+  const [newSantriNisn, setNewSantriNisn] = useState<string>('');
+  const [newSantriNik, setNewSantriNik] = useState<string>('');
+  const [newSantriTempatLahir, setNewSantriTempatLahir] = useState<string>('');
+  const [newSantriTanggalLahir, setNewSantriTanggalLahir] = useState<string>('');
+  const [newSantriJenisKelamin, setNewSantriJenisKelamin] = useState<'Laki-laki' | 'Perempuan'>('Laki-laki');
+  const [newSantriAlamatKK, setNewSantriAlamatKK] = useState<string>('');
+  const [newSantriNamaAyah, setNewSantriNamaAyah] = useState<string>('');
+  const [newSantriNamaIbu, setNewSantriNamaIbu] = useState<string>('');
+
+  const [manajemenSearch, setManajemenSearch] = useState<string>('');
+  const [editingSantri, setEditingSantri] = useState<Santri | null>(null);
+  const [showFormModal, setShowFormModal] = useState<boolean>(false);
+  const [expandedSantriId, setExpandedSantriId] = useState<string | null>(null);
+
+  // Bulk levels promotion states
+  const [bulkSrcLevel, setBulkSrcLevel] = useState<string>('');
+  const [bulkDestLevel, setBulkDestLevel] = useState<string>('');
+
   // Tambah Ustadz Form States
   const [newUstNama, setNewUstNama] = useState<string>('');
   const [newUstNip, setNewUstNip] = useState<string>('');
@@ -131,6 +190,12 @@ export default function PengurusDashboard({
   const [newUstNoHp, setNewUstNoHp] = useState<string>('');
   const [newUstTanggal, setNewUstTanggal] = useState<string>(new Date().toISOString().split('T')[0]);
   const [ustadzSuccess, setUstadzSuccess] = useState<string>('');
+
+  // Custom confirmation dialog states
+  const [deleteConfirmUst, setDeleteConfirmUst] = useState<Ustadz | null>(null);
+  const [deleteConfirmSantri, setDeleteConfirmSantri] = useState<Santri | null>(null);
+  const [promoteConfirmSantri, setPromoteConfirmSantri] = useState<{ santri: Santri; currentLevel: string; nextLevel: string } | null>(null);
+  const [bulkPromoteConfirm, setBulkPromoteConfirm] = useState<{ srcLevel: string; destLevel: string; count: number } | null>(null);
 
   // Financial Filter States
   const [sppFilter, setSppFilter] = useState<'Semua' | 'Lunas' | 'Belum Bayar' | 'Menunggu Konfirmasi'>('Semua');
@@ -222,26 +287,97 @@ export default function PengurusDashboard({
     setTimeout(() => setKeuanganSuccess(''), 4000);
   };
 
-  // Handle adding student submission
+  // Expanded state initiators for complete Santri Management
+  const handleStartEditSantri = (s: Santri) => {
+    setEditingSantri(s);
+    setNewSantriNama(s.nama);
+    setNewSantriNis(s.nis);
+    setNewSantriKelas(s.kelas);
+    setNewSantriNamaWali(s.namaWali);
+    setNewSantriTeleponWali(s.teleponWali);
+    setNewSantriJuz(s.juzTerakhir);
+    setNewSantriNoKK(s.noKK || '');
+    setNewSantriNisn(s.nisn || '');
+    setNewSantriNik(s.nik || '');
+    setNewSantriTempatLahir(s.tempatLahir || '');
+    setNewSantriTanggalLahir(s.tanggalLahir || '');
+    setNewSantriJenisKelamin(s.jenisKelamin || 'Laki-laki');
+    setNewSantriAlamatKK(s.alamatKK || '');
+    setNewSantriNamaAyah(s.namaAyahKandung || '');
+    setNewSantriNamaIbu(s.namaIbuKandung || '');
+    setShowFormModal(true);
+  };
+
+  const handleStartAddNewSantri = () => {
+    setEditingSantri(null);
+    setNewSantriNama('');
+    setNewSantriNis('');
+    setNewSantriKelas('Kelas 1 Awaliyah');
+    setNewSantriNamaWali('');
+    setNewSantriTeleponWali('');
+    setNewSantriJuz(30);
+    setNewSantriNoKK('');
+    setNewSantriNisn('');
+    setNewSantriNik('');
+    setNewSantriTempatLahir('');
+    setNewSantriTanggalLahir('');
+    setNewSantriJenisKelamin('Laki-laki');
+    setNewSantriAlamatKK('');
+    setNewSantriNamaAyah('');
+    setNewSantriNamaIbu('');
+    setShowFormModal(true);
+  };
+
+  // Handle adding or updating student submission with Full KK details, NIK, NIS, & NISN
   const handleSantriSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSantriNama.trim() || !newSantriNis.trim() || !newSantriNamaWali.trim()) return;
 
-    onAddSantri({
+    const payload = {
       nama: newSantriNama,
       nis: newSantriNis,
       kelas: newSantriKelas,
       namaWali: newSantriNamaWali,
       teleponWali: newSantriTeleponWali || '081234567890',
-      juzTerakhir: Number(newSantriJuz)
-    });
+      juzTerakhir: Number(newSantriJuz),
+      noKK: newSantriNoKK || undefined,
+      nisn: newSantriNisn || undefined,
+      nik: newSantriNik || undefined,
+      tempatLahir: newSantriTempatLahir || undefined,
+      tanggalLahir: newSantriTanggalLahir || undefined,
+      jenisKelamin: newSantriJenisKelamin,
+      alamatKK: newSantriAlamatKK || undefined,
+      namaAyahKandung: newSantriNamaAyah || undefined,
+      namaIbuKandung: newSantriNamaIbu || undefined,
+    };
 
+    if (editingSantri) {
+      onUpdateSantri(editingSantri.id, payload);
+      setSantriSuccess(`Alhamdulillah! Biodata santri [${newSantriNama}] berhasil diperbarui.`);
+    } else {
+      onAddSantri(payload);
+      setSantriSuccess(`Alhamdulillah! Santri baru [${newSantriNama}] berhasil didaftarkan di kelas ${newSantriKelas}.`);
+    }
+
+    // Reset fields
     setNewSantriNama('');
     setNewSantriNis('');
+    setNewSantriKelas('Kelas 1 Awaliyah');
     setNewSantriNamaWali('');
     setNewSantriTeleponWali('');
     setNewSantriJuz(30);
-    setSantriSuccess(`Alhamdulillah! Santri baru [${newSantriNama}] berhasil didaftarkan di kelas ${newSantriKelas}.`);
+    setNewSantriNoKK('');
+    setNewSantriNisn('');
+    setNewSantriNik('');
+    setNewSantriTempatLahir('');
+    setNewSantriTanggalLahir('');
+    setNewSantriJenisKelamin('Laki-laki');
+    setNewSantriAlamatKK('');
+    setNewSantriNamaAyah('');
+    setNewSantriNamaIbu('');
+    setEditingSantri(null);
+    setShowFormModal(false);
+
     setTimeout(() => setSantriSuccess(''), 4500);
   };
 
@@ -312,6 +448,196 @@ export default function PengurusDashboard({
 
   return (
     <div className="space-y-6">
+      {/* ----------------- MODAL CONFIRMATIONS ----------------- */}
+
+      {/* 1. Modal Hapus Ustadz */}
+      {deleteConfirmUst && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 p-6 max-w-md w-full shadow-xl space-y-4 animate-fade-in text-slate-800">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-red-50 text-red-600 rounded-2xl shrink-0">
+                <Trash2 className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-slate-800 text-sm">Hapus Ustadz Permanen?</h3>
+                <p className="text-xxs text-slate-500 leading-relaxed">
+                  Apakah Anda yakin ingin menghapus <strong>{deleteConfirmUst.nama}</strong> dari daftar pengajar pondok secara permanen? Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+            </div>
+            
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-xxs font-mono text-slate-600">
+              <span className="font-bold text-slate-850 block mb-0.5">{deleteConfirmUst.nama}</span>
+              <span>NIP: {deleteConfirmUst.nip} &bull; Pengampu: {deleteConfirmUst.bidangKeahlian}</span>
+            </div>
+
+            <div className="flex gap-2.5 justify-end">
+              <button
+                onClick={() => setDeleteConfirmUst(null)}
+                className="px-4 py-2 text-xxs font-bold text-slate-550 border border-slate-200 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteUstadz(deleteConfirmUst.id);
+                  setDeleteConfirmUst(null);
+                  setUstadzSuccess(`Alhamdulillah! Ustadz berhasil dihapus dari daftar khidmah.`);
+                }}
+                className="px-4 py-2 text-xxs font-bold text-white bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-xl transition-all cursor-pointer shadow-sm"
+              >
+                Ya, Hapus Permanen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Modal Hapus Santri */}
+      {deleteConfirmSantri && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 p-6 max-w-md w-full shadow-xl space-y-4 animate-fade-in text-slate-800">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-red-50 text-red-600 rounded-2xl shrink-0">
+                <Trash2 className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-slate-800 text-sm">Hapus Santri Permanen?</h3>
+                <p className="text-xxs text-slate-500 leading-relaxed">
+                  Apakah Anda yakin ingin menghapus santri bernama <strong>{deleteConfirmSantri.nama}</strong> dari database secara permanen?
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-xxs font-mono text-slate-600">
+              <span className="font-bold text-slate-850 block mb-0.5">{deleteConfirmSantri.nama}</span>
+              <span>NIS: {deleteConfirmSantri.nis} &bull; Kelas: {deleteConfirmSantri.kelas}</span>
+            </div>
+
+            <div className="flex gap-2.5 justify-end">
+              <button
+                onClick={() => setDeleteConfirmSantri(null)}
+                className="px-4 py-2 text-xxs font-bold text-slate-550 border border-slate-200 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteSantri(deleteConfirmSantri.id);
+                  setDeleteConfirmSantri(null);
+                  setSantriSuccess(`Alhamdulillah! Santri berhasil dihapus secara permanen.`);
+                }}
+                className="px-4 py-2 text-xxs font-bold text-white bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-xl transition-all cursor-pointer shadow-sm"
+              >
+                Ya, Hapus Permanen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Modal Kenaikan Tingkat Santri Tunggal */}
+      {promoteConfirmSantri && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 p-6 max-w-md w-full shadow-xl space-y-4 animate-fade-in text-slate-800">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-slate-800 text-sm">Konfirmasi Kenaikan Tingkat</h3>
+                <p className="text-xxs text-slate-500 leading-relaxed">
+                  Apakah Anda yakin ingin menaikkan tingkat/kelas untuk santri berikut ini?
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 leading-relaxed text-xs">
+              <span className="font-bold text-slate-800 block mb-1 text-sm">{promoteConfirmSantri.santri.nama}</span>
+              <div className="flex items-center gap-2 mt-2 font-mono text-xxs text-slate-500">
+                <span className="px-2 py-1 bg-slate-150 rounded text-slate-705">{promoteConfirmSantri.currentLevel}</span>
+                <span>&rarr;</span>
+                <span className="px-2 py-1 bg-emerald-100 text-emerald-800 font-bold rounded">{promoteConfirmSantri.nextLevel}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 justify-end">
+              <button
+                onClick={() => setPromoteConfirmSantri(null)}
+                className="px-4 py-2 text-xxs font-bold text-slate-550 border border-slate-200 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => {
+                  onUpdateSantri(promoteConfirmSantri.santri.id, { kelas: promoteConfirmSantri.nextLevel });
+                  setPromoteConfirmSantri(null);
+                  setSantriSuccess(`Alhamdulillah! Tingkat ${promoteConfirmSantri.santri.nama} berhasil dinaikkan ke [${promoteConfirmSantri.nextLevel}].`);
+                }}
+                className="px-4 py-2 text-xxs font-bold text-white bg-emerald-600 hover:bg-emerald-750 active:bg-emerald-800 rounded-xl transition-all cursor-pointer shadow-sm"
+              >
+                Sahkan Kenaikan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Modal Kenaikan Tingkat/Kelas Massal */}
+      {bulkPromoteConfirm && (
+        <div className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-100 p-6 max-w-md w-full shadow-xl space-y-4 animate-fade-in text-slate-800">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
+                <GraduationCap className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-slate-800 text-sm">Konfirmasi Kenaikan Massal</h3>
+                <p className="text-xxs text-slate-500 leading-relaxed">
+                  Apakah Anda yakin ingin menaikkan <strong>{bulkPromoteConfirm.count} santri</strong> sekaligus dari tingkat saat ini?
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 leading-relaxed text-xs space-y-1.5">
+              <div className="flex justify-between items-center text-slate-650">
+                <span>Tingkat Asal:</span>
+                <strong className="text-slate-800 px-2 py-0.5 rounded bg-slate-200 text-xxs font-mono">{bulkPromoteConfirm.srcLevel}</strong>
+              </div>
+              <div className="flex justify-between items-center text-slate-650">
+                <span>Tingkat Baru:</span>
+                <strong className="text-emerald-800 px-2 py-0.5 rounded bg-emerald-100 text-xxs font-mono">{bulkPromoteConfirm.destLevel}</strong>
+              </div>
+              <div className="flex justify-between items-center text-slate-650 pt-1.5 border-t border-slate-200">
+                <span>Jumlah Santri Terdampak:</span>
+                <strong className="text-slate-800 text-sm font-bold font-mono">{bulkPromoteConfirm.count} Santri</strong>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 justify-end">
+              <button
+                onClick={() => setBulkPromoteConfirm(null)}
+                className="px-4 py-2 text-xxs font-bold text-slate-550 border border-slate-200 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => {
+                  onBulkPromote(bulkPromoteConfirm.srcLevel, bulkPromoteConfirm.destLevel);
+                  setBulkPromoteConfirm(null);
+                  setBulkSrcLevel('');
+                  setBulkDestLevel('');
+                  setSantriSuccess(`Alhamdulillah! ${bulkPromoteConfirm.count} santri dari kelas [${bulkPromoteConfirm.srcLevel}] berhasil dinaikkan ke tingkat [${bulkPromoteConfirm.destLevel}].`);
+                }}
+                className="px-4 py-2 text-xxs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl transition-all cursor-pointer shadow-sm"
+              >
+                Sahkan Kenaikan Massal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Panel */}
       <div id="pengurus-banner" className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center space-x-4">
@@ -336,7 +662,7 @@ export default function PengurusDashboard({
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 p-1 bg-slate-100 rounded-xl max-w-2xl overflow-x-auto scroller-hidden">
+      <div className="flex space-x-1 p-1 bg-slate-100 rounded-xl max-w-4xl overflow-x-auto scroller-hidden">
         <button
           id="pengurus-tab-stats"
           onClick={() => setActiveTab('stats')}
@@ -347,6 +673,17 @@ export default function PengurusDashboard({
           }`}
         >
           Metrik & Statistik
+        </button>
+        <button
+          id="pengurus-tab-santri"
+          onClick={() => setActiveTab('santri')}
+          className={`shrink-0 flex-1 px-3 py-2 text-center rounded-lg text-xs font-semibold transition-all ${
+            activeTab === 'santri'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          Manajemen Santri
         </button>
         <button
           id="pengurus-tab-absensi"
@@ -1081,111 +1418,26 @@ export default function PengurusDashboard({
                 </div>
 
                 {/* Form Tambah Santri Baru */}
-                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm mt-6">
-                  <h3 className="font-bold text-slate-803 text-sm flex items-center gap-1.5 mb-1">
-                    <Plus className="w-5 h-5 text-emerald-600 bg-emerald-50 rounded-lg p-0.5" />
-                    Registrasi & Tambah Santri Baru
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm mt-6 text-center">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
+                    <UserPlus className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-bold text-slate-803 text-sm mb-1">
+                    Registrasi Santri Terpusat
                   </h3>
-                  <p className="text-xxs text-slate-450 mb-4 font-normal">Daftarkan santri baru ke dalam database TPQ AL ASYHAR DAN MADIN MIFTAHUL ULUM 1 SIMA MOGA PEMALANG JAWA TENGAH.</p>
-
-                  {santriSuccess && (
-                    <div className="bg-emerald-50 text-emerald-800 border border-emerald-250 p-3 rounded-xl mb-4 text-xs font-semibold">
-                      {santriSuccess}
-                    </div>
-                  )}
-
-                  <form onSubmit={handleSantriSubmit} className="space-y-3">
-                    <div>
-                      <label htmlFor="reg-nama" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Nama Lengkap Santri</label>
-                      <input
-                        id="reg-nama"
-                        type="text"
-                        required
-                        placeholder="Contoh: Muhammad Ilham"
-                        value={newSantriNama}
-                        onChange={(e) => setNewSantriNama(e.target.value)}
-                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label htmlFor="reg-nis" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">NIS (Nomor Induk)</label>
-                        <input
-                          id="reg-nis"
-                          type="text"
-                          required
-                          placeholder="Contoh: 1212004"
-                          value={newSantriNis}
-                          onChange={(e) => setNewSantriNis(e.target.value)}
-                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="reg-kelas" className="block text-xxs font-bold text-slate-555 uppercase tracking-wider mb-1">Pilih Kelas</label>
-                        <select
-                          id="reg-kelas"
-                          value={newSantriKelas}
-                          onChange={(e) => setNewSantriKelas(e.target.value)}
-                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
-                        >
-                          <option value="Kelas 1 Awaliyah">Kelas 1 Awaliyah</option>
-                          <option value="Kelas 2 Awaliyah">Kelas 2 Awaliyah</option>
-                          <option value="Kelas 3 Awaliyah">Kelas 3 Awaliyah</option>
-                          <option value="Kelas 4 Awaliyah">Kelas 4 Awaliyah</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label htmlFor="reg-wali" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Nama Lengkap Wali</label>
-                        <input
-                          id="reg-wali"
-                          type="text"
-                          required
-                          placeholder="Nama ayah / ibu"
-                          value={newSantriNamaWali}
-                          onChange={(e) => setNewSantriNamaWali(e.target.value)}
-                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="reg-telp" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">No. WhatsApp Wali</label>
-                        <input
-                          id="reg-telp"
-                          type="tel"
-                          required
-                          placeholder="Contoh: 0812XXXXXXXX"
-                          value={newSantriTeleponWali}
-                          onChange={(e) => setNewSantriTeleponWali(e.target.value)}
-                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor="reg-juz" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Juz Terakhir yang Dikuasai</label>
-                      <input
-                        id="reg-juz"
-                        type="number"
-                        min={0}
-                        max={30}
-                        required
-                        value={newSantriJuz}
-                        onChange={(e) => setNewSantriJuz(Number(e.target.value))}
-                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
-                      />
-                    </div>
-
-                    <button
-                      id="submit-register-santri-btn"
-                      type="submit"
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-xs block text-center"
-                    >
-                      Sahkan Pendaftaran Santri
-                    </button>
-                  </form>
+                  <p className="text-xxs text-slate-450 mb-4 font-normal">
+                    Penerimaan dan manajemen biodata lengkap santri (KK, NIK, NISN, Silsilah Wali) sekarang berada di bawah navigasi terpusat "Manajemen Santri".
+                  </p>
+                  <button
+                    onClick={() => {
+                      setActiveTab('santri');
+                      handleStartAddNewSantri();
+                    }}
+                    type="button"
+                    className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-sm block text-center"
+                  >
+                    Buka Formulir Registrasi Lengkap
+                  </button>
                 </div>
               </div>
             </div>
@@ -1508,13 +1760,22 @@ export default function PengurusDashboard({
                     id={`ustadz-card-${ust.id}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 font-extrabold flex items-center justify-center text-xs font-sans">
+                      <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 font-extrabold flex items-center justify-center text-xs font-sans shrink-0">
                         {ust.nama.split(' ').filter(n => !['Ustadz','Ustadzah','KH.','KH','H.','H'].includes(n)).slice(0, 2).map(n => n[0]).join('') || 'US'}
                       </div>
-                      <div>
-                        <h4 className="font-bold text-xs text-slate-800">{ust.nama}</h4>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-xs text-slate-800 truncate">{ust.nama}</h4>
                         <p className="text-[10px] font-mono text-slate-400">NIP: {ust.nip}</p>
                       </div>
+                      <button
+                        onClick={() => {
+                          setDeleteConfirmUst(ust);
+                        }}
+                        className="p-1.5 hover:bg-red-50 text-red-500 hover:text-red-700 rounded-xl transition-all cursor-pointer shrink-0"
+                        title="Hapus Ustadz"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
 
                     <div className="space-y-1 text-xxs text-slate-600 pt-1.5 border-t border-slate-200/60">
@@ -1659,6 +1920,611 @@ export default function PengurusDashboard({
             perizinanList={perizinanList}
             tagihanList={tagihanList}
           />
+        </div>
+      )}
+
+      {/* 1.5. Manajemen Santri Tab */}
+      {activeTab === 'santri' && (() => {
+        const filteredSantriList = allSantri.filter(s => {
+          const q = manajemenSearch.toLowerCase().trim();
+          if (!q) return true;
+          return (
+            s.nama.toLowerCase().includes(q) ||
+            s.nis.toLowerCase().includes(q) ||
+            (s.nisn && s.nisn.toLowerCase().includes(q)) ||
+            (s.nik && s.nik.toLowerCase().includes(q)) ||
+            (s.noKK && s.noKK.toLowerCase().includes(q)) ||
+            s.kelas.toLowerCase().includes(q) ||
+            s.namaWali.toLowerCase().includes(q)
+          );
+        });
+
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-100 mb-6">
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                      <Users className="w-5 h-5" />
+                    </span>
+                    Direktori & Manajemen Santri
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1 font-normal">
+                    Kelola data induk kependudukan santri, nomor kartu keluarga (KK), NISN, Wali santri, dan rekam mutasi santri TPQ & Madin.
+                  </p>
+                </div>
+                <button
+                  id="manajemen-add-santri-btn"
+                  onClick={handleStartAddNewSantri}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Registrasi Santri Baru
+                </button>
+              </div>
+
+              {/* Filter & Search Bar */}
+              <div className="flex flex-col sm:flex-row gap-2 max-w-lg mb-6">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Cari Nama, NIS, NISN, NIK, KK, atau Wali..."
+                    value={manajemenSearch}
+                    onChange={(e) => setManajemenSearch(e.target.value)}
+                    className="w-full text-xs pl-9 pr-4 py-2 border border-slate-200 rounded-xl outline-none focus:ring-1 focus:ring-amber-500 bg-white"
+                  />
+                </div>
+                {manajemenSearch && (
+                  <button
+                    onClick={() => setManajemenSearch('')}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl px-3 py-2 text-xs font-semibold shrink-0 transition-all"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+
+              {/* Success messaging inside tab too */}
+              {santriSuccess && (
+                <div className="bg-emerald-50 text-emerald-800 border border-emerald-250 p-4 rounded-xl mb-6 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+                  <Check className="w-4 h-4 text-emerald-600 shrink-0 bg-emerald-100 p-0.5 rounded-full" />
+                  {santriSuccess}
+                </div>
+              )}
+
+              {/* Fitur Kenaikan Tingkat/Kelas Massal */}
+              <div className="bg-emerald-50/20 border border-emerald-100/65 rounded-3xl p-5 mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                    <GraduationCap className="w-4.5 h-4.5" />
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800">Kenaikan Jilid, Al-Qur'an & Kelas Massal</h4>
+                    <p className="text-[10px] text-slate-500 font-normal">Naikkan tingkat seluruh Jilid, Al-Qur'an, maupun Kelas Awaliyah santri secara sekaligus.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                  <div>
+                    <label htmlFor="bulk-src-selector" className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Pilih Kelas / Tingkat Asal</label>
+                    <select
+                      id="bulk-src-selector"
+                      value={bulkSrcLevel}
+                      onChange={(e) => {
+                        const src = e.target.value;
+                        setBulkSrcLevel(src);
+                        setBulkDestLevel(getNextLevel(src));
+                      }}
+                      className="w-full text-xs border border-emerald-100/80 rounded-xl px-3 py-2 bg-white text-slate-800 outline-none focus:ring-1 focus:ring-emerald-500"
+                    >
+                      <option value="">-- Pilih Tingkat Asal --</option>
+                      {LEVEL_ORDER.map(lvl => (
+                        <option key={lvl} value={lvl}>{lvl}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="bulk-dest-selector" className="block text-[9px] font-bold text-slate-500 uppercase mb-1">Tingkat Tujuan Baru</label>
+                    <select
+                      id="bulk-dest-selector"
+                      value={bulkDestLevel}
+                      onChange={(e) => setBulkDestLevel(e.target.value)}
+                      className="w-full text-xs border border-emerald-100/80 rounded-xl px-3 py-2 bg-white text-slate-800 outline-none focus:ring-1 focus:ring-emerald-500"
+                    >
+                      <option value="">-- Pilih Tingkat Tujuan --</option>
+                      {LEVEL_ORDER.map(lvl => (
+                        <option key={lvl} value={lvl}>{lvl}</option>
+                      ))}
+                      <option value="Alumni / Lulus">Alumni / Lulus</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (!bulkSrcLevel || !bulkDestLevel) {
+                        setSantriSuccess("⚠️ Harap pilih tingkat asal dan tingkat tujuan terlebih dahulu.");
+                        return;
+                      }
+                      const count = allSantri.filter(s => s.kelas === bulkSrcLevel).length;
+                      if (count === 0) {
+                        setSantriSuccess(`⚠️ Tidak ada santri yang terdaftar di tingkat [${bulkSrcLevel}].`);
+                        return;
+                      }
+                      setBulkPromoteConfirm({ srcLevel: bulkSrcLevel, destLevel: bulkDestLevel, count });
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1 h-9 cursor-pointer"
+                  >
+                    <CheckCircle className="w-4 h-4 text-emerald-100" />
+                    <span>Lakukan Kenaikan Massal</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Students grid list */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredSantriList.map((s) => {
+                  const isExpanded = expandedSantriId === s.id;
+                  return (
+                    <div
+                      key={s.id}
+                      id={`santri-card-${s.id}`}
+                      className={`bg-slate-50/50 rounded-2xl border transition-all p-5 flex flex-col justify-between ${
+                        isExpanded ? 'border-amber-500 bg-amber-50/10 shadow-sm' : 'border-slate-100 hover:border-slate-205'
+                      }`}
+                    >
+                      <div>
+                        {/* Card Header Info */}
+                        <div className="flex justify-between items-start">
+                          <div className="flex gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-200/50 flex items-center justify-center font-bold text-amber-800 text-xs shrink-0 font-sans">
+                              {s.nama.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-800 text-xs leading-snug">{s.nama}</h4>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold uppercase">
+                                  NIS: {s.nis}
+                                </span>
+                                {s.nisn && (
+                                  <span className="text-[10px] font-mono bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase">
+                                    NISN: {s.nisn}
+                                  </span>
+                                )}
+                                <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded uppercase font-bold">
+                                  {s.kelas}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Top-right performance quick gauges */}
+                          <div className="text-right flex flex-col items-end shrink-0">
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                              Presensi {s.kehadiranPercent}%
+                            </span>
+                            <span className="text-[9px] text-slate-400 mt-1 font-mono uppercase font-bold text-right block">
+                              Al-Qur'an: Juz {s.juzTerakhir}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Brief Bio Preview */}
+                        <div className="mt-4 grid grid-cols-2 gap-2 text-xxs border-t border-slate-100 pt-3">
+                          <div>
+                            <span className="text-slate-400 font-medium block uppercase tracking-wider">NIK</span>
+                            <span className="font-semibold text-slate-700">{s.nik || '—'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 font-medium block uppercase tracking-wider">Nama Wali</span>
+                            <span className="font-semibold text-slate-700">{s.namaWali}</span>
+                          </div>
+                        </div>
+
+                        {/* Collapsible Expanded Kartu Keluarga Detail Panel */}
+                        {isExpanded && (
+                          <div className="mt-4 pt-4 border-t border-slate-200/50 space-y-4 animate-fade-in text-xxs font-sans">
+                            {/* Section: Catatan KK */}
+                            <div className="bg-white rounded-xl p-3 border border-slate-100 space-y-2">
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-amber-800 block mb-1">
+                                Informasi Kartu Keluarga (KK) & Tempat Tinggal
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                  <span className="text-slate-400">Nomor Kartu Keluarga:</span>
+                                  <p className="font-semibold text-slate-800 font-mono">{s.noKK || '—'}</p>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">NIK Santri:</span>
+                                  <p className="font-semibold text-slate-800 font-mono">{s.nik || '—'}</p>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">Tempat, Tanggal Lahir:</span>
+                                  <p className="font-semibold text-slate-800">
+                                    {s.tempatLahir || '—'}, {s.tanggalLahir || '—'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">Jenis Kelamin:</span>
+                                  <p className="font-semibold text-slate-800">{s.jenisKelamin || '—'}</p>
+                                </div>
+                              </div>
+                              <div className="pt-2 border-t border-slate-50">
+                                <span className="text-slate-400 flex items-center gap-0.5">
+                                  <MapPin className="w-3 h-3 text-slate-400" /> Alamat KK Lengkap:
+                                </span>
+                                <p className="font-semibold text-slate-800 mt-0.5 leading-relaxed">{s.alamatKK || '—'}</p>
+                              </div>
+                            </div>
+
+                            {/* Section: Silsilah Orang Tua Kandung */}
+                            <div className="bg-white rounded-xl p-3 border border-slate-100 space-y-2">
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-amber-800 block mb-1">
+                                Nama Orang Tua Kandung & Wali
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                  <span className="text-slate-400">Nama Ayah Kandung:</span>
+                                  <p className="font-semibold text-slate-800">{s.namaAyahKandung || '—'}</p>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">Nama Ibu Kandung:</span>
+                                  <p className="font-semibold text-slate-800">{s.namaIbuKandung || '—'}</p>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400">Nama Wali:</span>
+                                  <p className="font-semibold text-slate-800">{s.namaWali}</p>
+                                </div>
+                                <div>
+                                  <span className="text-slate-400 flex items-center gap-0.5">
+                                    <Phone className="w-3 h-3 text-slate-400" /> WhatsApp Wali:
+                                  </span>
+                                  <p className="font-semibold text-slate-800">{s.teleponWali}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Section: Catatan Pelanggaran */}
+                            <div className="bg-white rounded-xl p-3 border border-slate-100">
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-amber-800 block mb-1">
+                                Rekam Kedisiplinan / Ta'zir
+                              </span>
+                              {s.catatanPelanggaran.length > 0 ? (
+                                <ul className="list-disc pl-4 space-y-1 mt-1 text-slate-700 font-medium">
+                                  {s.catatanPelanggaran.map((pel, i) => (
+                                    <li key={i}>{pel}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-slate-400 italic">Belum ada catatan pelanggaran disiplin.</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Expand and Action Section */}
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <button
+                          onClick={() => setExpandedSantriId(isExpanded ? null : s.id)}
+                          className="text-amber-800 bg-amber-50 hover:bg-amber-100 font-bold px-3 py-1.5 rounded-xl text-[10px] transition-all"
+                        >
+                          {isExpanded ? 'Sembunyikan Biodata KK' : 'Tampilkan Biodata Lengkap KK'}
+                        </button>
+
+                        <div className="flex items-center gap-1">
+                          {/* Kenaikan Tingkat button */}
+                          {(() => {
+                            const currentLevel = s.kelas;
+                            const nextLevel = getNextLevel(currentLevel);
+                            const canPromote = nextLevel !== currentLevel;
+
+                            return (
+                              <button
+                                onClick={() => {
+                                  setPromoteConfirmSantri({ santri: s, currentLevel, nextLevel });
+                                }}
+                                disabled={!canPromote || nextLevel === "Alumni / Lulus"}
+                                id={`santri-promote-${s.id}`}
+                                title={`Naikkan ke ${nextLevel}`}
+                                className="bg-emerald-50 hover:bg-emerald-100 disabled:opacity-40 text-emerald-800 font-bold px-2.5 py-1.5 rounded-xl text-[10px] flex items-center gap-1 transition-all mr-1 cursor-pointer"
+                              >
+                                <GraduationCap className="w-3.5 h-3.5" />
+                                <span>Naik ke {nextLevel}</span>
+                              </button>
+                            );
+                          })()}
+                          <button
+                            onClick={() => handleStartEditSantri(s)}
+                            id={`santri-edit-${s.id}`}
+                            title="Edit Biodata"
+                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-all shrink-0"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeleteConfirmSantri(s);
+                            }}
+                            id={`santri-delete-${s.id}`}
+                            title="Hapus Santri"
+                            className="p-1.5 hover:bg-red-50 rounded-lg text-red-550 hover:text-red-700 transition-all shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {filteredSantriList.length === 0 && (
+                  <div className="bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-8 text-center col-span-2">
+                    <p className="text-slate-450 font-normal text-xs mb-1">
+                      Tidak ditemukan data santri dengan kata kunci tersebut.
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      Silakan ganti kata kunci atau tambahkan santri baru dengan mengklik tombol "Registrasi Santri Baru".
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Global Form Modal for Adding / Editing Santri */}
+      {showFormModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs font-sans">
+          <div className="bg-white rounded-3xl border border-slate-105 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                  <UserPlus className="w-5 h-5 text-amber-600" />
+                  {editingSantri ? 'Perbarui Biodata Lengkap Santri' : 'Registrasi & Tambah Santri Baru'}
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Lengkapi seluruh isian formulir sesuai dengan dokumen Kartu Keluarga (KK) resmi.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowFormModal(false)}
+                className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-650 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSantriSubmit} className="p-6 space-y-4 text-left">
+              {/* BAGIAN 1: Identitas Pokok */}
+              <div>
+                <h4 className="text-[10px] uppercase font-extrabold text-amber-800 tracking-wider mb-2 pb-1 border-b border-amber-100 flex items-center gap-1">
+                  <span>I. Identitas Pokok Pendidikan</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Nama Lengkap Santri <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Contoh: Muhammad Faiz Al-Fatih"
+                      value={newSantriNama}
+                      onChange={(e) => setNewSantriNama(e.target.value)}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Pilih Kelas</label>
+                    <select
+                      value={newSantriKelas}
+                      onChange={(e) => setNewSantriKelas(e.target.value)}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white text-slate-800"
+                    >
+                      <option value="Jilid 1">Jilid 1</option>
+                      <option value="Jilid 2">Jilid 2</option>
+                      <option value="Jilid 3">Jilid 3</option>
+                      <option value="Jilid 4">Jilid 4</option>
+                      <option value="Jilid 5">Jilid 5</option>
+                      <option value="Al-Qur'an 1">Al-Qur'an 1</option>
+                      <option value="Al-Qur'an 2">Al-Qur'an 2</option>
+                      <option value="Kelas 1 Awaliyah">Kelas 1 Awaliyah</option>
+                      <option value="Kelas 2 Awaliyah">Kelas 2 Awaliyah</option>
+                      <option value="Kelas 3 Awaliyah">Kelas 3 Awaliyah</option>
+                      <option value="Kelas 4 Awaliyah">Kelas 4 Awaliyah</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">NIS (Nomor Induk) <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Contoh: 1212001"
+                      value={newSantriNis}
+                      onChange={(e) => setNewSantriNis(e.target.value)}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">NISN (10 Digit)</label>
+                    <input
+                      type="text"
+                      maxLength={10}
+                      placeholder="Contoh: 0087654321"
+                      value={newSantriNisn}
+                      onChange={(e) => setNewSantriNisn(e.target.value.replace(/\D/g, ''))}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* BAGIAN 2: Data Kependudukan Sesuai Kartu Keluarga */}
+              <div>
+                <h4 className="text-[10px] uppercase font-extrabold text-amber-800 tracking-wider mb-2 pb-1 border-b border-amber-100 flex items-center gap-1">
+                  <span>II. Data Kependudukan (Sesuai Kartu Keluarga)</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1 font-sans">Nomor Kartu Keluarga (KK)</label>
+                    <input
+                      type="text"
+                      maxLength={16}
+                      placeholder="Nomor KK (16 digit)"
+                      value={newSantriNoKK}
+                      onChange={(e) => setNewSantriNoKK(e.target.value.replace(/\D/g, ''))}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">NIK Santri</label>
+                    <input
+                      type="text"
+                      maxLength={16}
+                      placeholder="NIK Santri (16 digit)"
+                      value={newSantriNik}
+                      onChange={(e) => setNewSantriNik(e.target.value.replace(/\D/g, ''))}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Tempat Lahir</label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Pemalang"
+                      value={newSantriTempatLahir}
+                      onChange={(e) => setNewSantriTempatLahir(e.target.value)}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Tanggal Lahir</label>
+                    <input
+                      type="date"
+                      value={newSantriTanggalLahir}
+                      onChange={(e) => setNewSantriTanggalLahir(e.target.value)}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Jenis Kelamin</label>
+                    <select
+                      value={newSantriJenisKelamin}
+                      onChange={(e) => setNewSantriJenisKelamin(e.target.value as 'Laki-laki' | 'Perempuan')}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white text-slate-800"
+                    >
+                      <option value="Laki-laki">Laki-laki</option>
+                      <option value="Perempuan">Perempuan</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Juz Hafalan Terakhir</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={30}
+                      value={newSantriJuz}
+                      onChange={(e) => setNewSantriJuz(Number(e.target.value))}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* BAGIAN 3: Kelompok Silsilah & Wali */}
+              <div>
+                <h4 className="text-[10px] uppercase font-extrabold text-amber-800 tracking-wider mb-2 pb-1 border-b border-amber-100 flex items-center gap-1">
+                  <span>III. Silsilah Rumah Tangga & Wali Terdaftar</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Nama Ayah Kandung</label>
+                    <input
+                      type="text"
+                      placeholder="Nama Lengkap Ayah"
+                      value={newSantriNamaAyah}
+                      onChange={(e) => setNewSantriNamaAyah(e.target.value)}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Nama Ibu Kandung</label>
+                    <input
+                      type="text"
+                      placeholder="Nama Lengkap Ibu"
+                      value={newSantriNamaIbu}
+                      onChange={(e) => setNewSantriNamaIbu(e.target.value)}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Nama Lengkap Wali <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Contoh: Bapak H. Rahman Hakim"
+                      value={newSantriNamaWali}
+                      onChange={(e) => setNewSantriNamaWali(e.target.value)}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">No. WhatsApp Wali <span className="text-red-500">*</span></label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Contoh: 081234567890"
+                      value={newSantriTeleponWali}
+                      onChange={(e) => setNewSantriTeleponWali(e.target.value)}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <label className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Alamat Lengkap Sesuai KK</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Tuliskan alamat lengkap mulai dari Jalan, No. Rumah, RT/RW, Dusun/Desa, Kecamatan, Kabupaten..."
+                    value={newSantriAlamatKK}
+                    onChange={(e) => setNewSantriAlamatKK(e.target.value)}
+                    className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white text-slate-800 resize-none font-sans"
+                  />
+                </div>
+              </div>
+
+              {/* Action Rows */}
+              <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowFormModal(false)}
+                  className="bg-slate-150 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-all"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  id="modal-submit-santri-btn"
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2 rounded-xl text-xs transition-all shadow-sm"
+                >
+                  {editingSantri ? 'Simpan Perubahan' : 'Sahkan Pendaftaran'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

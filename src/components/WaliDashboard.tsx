@@ -5,7 +5,8 @@ import {
   NilaiUjian,
   TagihanSPP,
   Perizinan,
-  PenilaianJilid
+  PenilaianJilid,
+  Ustadz
 } from '../types';
 import {
   Briefcase,
@@ -23,7 +24,8 @@ import {
   CheckCircle,
   FileText,
   UserCheck,
-  Send
+  Send,
+  Phone
 } from 'lucide-react';
 
 interface WaliDashboardProps {
@@ -36,6 +38,7 @@ interface WaliDashboardProps {
   onAddPerizinan: (newIzin: Omit<Perizinan, 'id'>) => void;
   onPaySPP: (tagihanId: string, metode: string) => void;
   allSantri: Santri[];
+  ustadzList: Ustadz[];
 }
 
 export default function WaliDashboard({
@@ -47,7 +50,8 @@ export default function WaliDashboard({
   penilaianJilidList = [],
   onAddPerizinan,
   onPaySPP,
-  allSantri
+  allSantri,
+  ustadzList
 }: WaliDashboardProps) {
   // Tabs
   const [activeTab, setActiveTab] = useState<'monitor' | 'spp' | 'perizinan' | 'chat'>('monitor');
@@ -71,6 +75,23 @@ export default function WaliDashboard({
     { sender: 'Pengurus', text: 'Sudah bapak. Rapot PTS sudah kami unggah secara digital di menu Akademik. Silakan ditinjau nilainya.', time: '08:35' },
   ]);
   const [chatInput, setChatInput] = useState<string>('');
+
+  // Real WhatsApp Integration states
+  const [selectedUstadzId, setSelectedUstadzId] = useState<string>('');
+  const [whatsappMessage, setWhatsappMessage] = useState<string>(
+    `Assalamu'alaikum Warahmatullahi Wabarakaatuh Ustadz/Pengurus, saya Wali dari santri ${santri.nama} (${santri.kelas}) ingin berkonsultasi mengenai perkembangan makhraj, hafalan jilid / Al-Qur'an, atau kegiatan belajar ananda di TPQ Al Asyhar / Madin Miftahul Ulum 1 Sima Pemalang.`
+  );
+
+  const formatWhatsAppNumber = (num: string): string => {
+    const cleaned = num.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) {
+      return '62' + cleaned.slice(1);
+    }
+    if (cleaned.startsWith('8')) {
+      return '62' + cleaned;
+    }
+    return cleaned || '6281234567890';
+  };
 
   // Filter child-specific items
   const childSetoran = setoranList.filter(s => s.santriId === santri.id);
@@ -622,61 +643,180 @@ export default function WaliDashboard({
 
       {/* Communications View */}
       {activeTab === 'chat' && (
-        <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-          <div className="border-b border-slate-100 pb-3 mb-4 flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <MessageSquare className="w-5 h-5 text-teal-600" />
-              <div>
-                <h3 className="font-bold text-slate-800 text-sm">Wali liaison - Hubungi Pengurus & Humas</h3>
-                <span className="text-xxs text-emerald-600 font-medium whitespace-nowrap flex items-center gap-1">
-                  <span className="block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Ustadz Pembina Online (Siap Merespon)
-                </span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Column A: Interactive Chat Simulator */}
+          <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="border-b border-slate-100 pb-3 mb-4 flex items-center justify-between">
+                <div className="flex items-center space-x-2.5">
+                  <MessageSquare className="w-5 h-5 text-teal-600" />
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm">Simulasi Asisten TPQ/Madin</h3>
+                    <span className="text-xxs text-emerald-600 font-medium whitespace-nowrap flex items-center gap-1">
+                      <span className="block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Virtual Bot Aktif (Respon Instan)
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Asisten Cerdas</span>
+              </div>
+
+              {/* Secure chat display logs */}
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 h-80 overflow-y-auto space-y-3.5 mb-4 flex flex-col justify-end">
+                <div className="text-center text-xxs text-slate-400 font-mono my-2 border-b border-slate-150 pb-2">
+                  Komunikasi Percobaan Cepat &bull; Gunakan kolom ini untuk tes respon otomatis
+                </div>
+                {chats.map((c, index) => {
+                  const fromMe = c.sender === 'Wali';
+                  return (
+                    <div key={index} className={`flex flex-col ${fromMe ? 'items-end' : 'items-start'}`}>
+                      <div className={`p-3 max-w-sm rounded-2xl text-xs font-medium leading-relaxed ${
+                        fromMe
+                          ? 'bg-teal-600 text-white rounded-br-none'
+                          : 'bg-white text-slate-800 border border-slate-150 rounded-bl-none'
+                      }`}>
+                        {c.text}
+                      </div>
+                      <span className="text-xxs font-mono text-slate-400 mt-1">{c.time}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <span className="text-xxs font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">Hub: Humas Putri/Putra</span>
+
+            {/* Composers */}
+            <form onSubmit={handleSendChat} className="flex gap-2.5">
+              <input
+                id="chat-input-box"
+                type="text"
+                placeholder="Tulis pesan pertanyaan perkembangan / kendala ananda..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                className="flex-1 border border-slate-205 rounded-xl px-4 py-2 text-xs outline-none focus:ring-1 focus:ring-teal-500 bg-white text-slate-800"
+              />
+              <button
+                id="send-chat-btn"
+                type="submit"
+                className="bg-teal-600 hover:bg-teal-700 text-white p-2.5 rounded-xl transition-all shadow-sm shrink-0 flex items-center justify-center w-10.5 h-10.5"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
           </div>
 
-          {/* Secure chat display logs */}
-          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 h-80 overflow-y-auto space-y-3.5 mb-4 flex flex-col justify-end">
-            <div className="text-center text-xxs text-slate-400 font-mono my-2 border-b border-slate-150 pb-2">
-              Keamanan Terenkripsi &bull; Pesan Anda dikirim ke Pengurus Asrama Santri
-            </div>
-            {chats.map((c, index) => {
-              const fromMe = c.sender === 'Wali';
-              return (
-                <div key={index} className={`flex flex-col ${fromMe ? 'items-end' : 'items-start'}`}>
-                  <div className={`p-3 max-w-sm rounded-2xl text-xs font-medium leading-relaxed ${
-                    fromMe
-                      ? 'bg-teal-600 text-white rounded-br-none'
-                      : 'bg-white text-slate-800 border border-slate-150 rounded-bl-none'
-                  }`}>
-                    {c.text}
+          {/* Column B: Real WhatsApp Gateway (REAL NYATA) */}
+          <div className="bg-emerald-50/25 rounded-3xl border border-emerald-100/60 p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="border-b border-emerald-100/50 pb-3 mb-4 flex items-center justify-between">
+                <div className="flex items-center space-x-2.5">
+                  <div className="p-1 rounded-lg bg-emerald-100 text-emerald-700">
+                    <Phone className="w-5 h-5 text-emerald-600" />
                   </div>
-                  <span className="text-xxs font-mono text-slate-400 mt-1">{c.time}</span>
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm">Hubungi Pengurus Via WhatsApp (Real)</h3>
+                    <span className="text-xxs text-emerald-700 font-bold whitespace-nowrap flex items-center gap-1">
+                      Terhubung Langsung ke WhatsApp Pengurus Secara Nyata &bull; Chat Aktif
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-2xl border border-emerald-100/50 space-y-3">
+                  <div>
+                    <label htmlFor="wa-penerima-select" className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Pilih Penerima (Ustadz / Pengurus Humas)
+                    </label>
+                    <select
+                      id="wa-penerima-select"
+                      value={selectedUstadzId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedUstadzId(val);
+                        const selectedU = ustadzList.find(u => u.id === val);
+                        const toName = selectedU ? selectedU.nama : 'Ustadz / Humas';
+                        setWhatsappMessage(
+                          `Assalamu'alaikum Warahmatullahi Wabarakaatuh ${toName}, saya Wali dari santri ${santri.nama} (${santri.kelas}) ingin berkonsultasi mengenai perkembangan makhraj, hafalan jilid / Al-Qur'an, atau kegiatan belajar ananda di TPQ Al Asyhar / Madin Miftahul Ulum 1 Sima Pemalang.`
+                        );
+                      }}
+                      className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white text-slate-800 outline-none focus:ring-1 focus:ring-emerald-500"
+                    >
+                      <option value="">-- Hubungi Humas Utama TPQ & Madin (Umum) --</option>
+                      {ustadzList.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.nama} ({u.bidangKeahlian}) — {u.noHp}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedUstadzId ? (() => {
+                    const selectedU = ustadzList.find(u => u.id === selectedUstadzId);
+                    if (!selectedU) return null;
+                    return (
+                      <div className="bg-slate-50/70 rounded-xl p-3 text-xxs text-slate-600 border border-slate-100">
+                        <span className="font-bold text-slate-700 block mb-0.5">{selectedU.nama}</span>
+                        <p className="font-mono text-slate-450 uppercase">NIP: {selectedU.nip} &bull; Spesialis: {selectedU.bidangKeahlian}</p>
+                        <p className="mt-1 text-emerald-700 font-semibold flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> Nomor Terdaftar: {selectedU.noHp}
+                        </p>
+                      </div>
+                    );
+                  })() : (
+                    <div className="bg-amber-50/70 rounded-xl p-3 text-xxs text-amber-800 border border-amber-100">
+                      <span className="font-bold block mb-0.5">Seksi Humas Umum Pondok</span>
+                      <p className="leading-snug">Menghubungi Seksi Humas Pusat Pondok Al-Asyhar & Miftahul Ulum 1 Sima Moga Pemalang Jawa Tengah.</p>
+                      <p className="mt-1 font-semibold flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3 text-amber-600" /> WhatsApp Call Center: 081234567890
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label htmlFor="wa-pesan-box" className="block text-xxs font-bold text-slate-500 uppercase tracking-wider">
+                    Tulis Pesan Konsultasi Nyata
+                  </label>
+                  <textarea
+                    id="wa-pesan-box"
+                    rows={4}
+                    value={whatsappMessage}
+                    onChange={(e) => setWhatsappMessage(e.target.value)}
+                    className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-500 bg-white text-slate-800 resize-none font-sans"
+                    placeholder="Tulis isi pesan konsultasi untuk dikirimkan melalui aplikasi WhatsApp resmi..."
+                  />
+                  <span className="text-[10px] text-slate-400 block font-normal leading-tight">
+                    Pesan otomatis dilengkapi dengan detail identitas santri agar memudahkan Ustadz memahami konteks obrolan.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {(() => {
+              const selectedU = ustadzList.find(u => u.id === selectedUstadzId);
+              const destinationPhone = selectedU ? selectedU.noHp : '081234567890'; // Humas default fallback
+              const encodedPhone = formatWhatsAppNumber(destinationPhone);
+              const encodedText = encodeURIComponent(whatsappMessage);
+              const waLink = `https://api.whatsapp.com/send?phone=${encodedPhone}&text=${encodedText}`;
+
+              return (
+                <div className="mt-4 pt-3 border-t border-emerald-100/50">
+                  <a
+                    href={waLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-3 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-sm uppercase tracking-wide cursor-pointer text-center block"
+                  >
+                    <MessageSquare className="w-4.5 h-4.5 animate-bounce shrink-0 inline-block" />
+                    <span>Kirim Pesan via WhatsApp Nyata</span>
+                  </a>
+                  <p className="text-[9px] text-center text-slate-400 mt-2">
+                    Mengklik tombol di atas akan membuka tab baru dan langsung terhubung secara nyata ke WhatsApp pengurus pondok.
+                  </p>
                 </div>
               );
-            })}
+            })()}
           </div>
-
-          {/* Composers */}
-          <form onSubmit={handleSendChat} className="flex gap-2.5">
-            <input
-              id="chat-input-box"
-              type="text"
-              placeholder="Tulis pesan pertanyaan perkembangan / kendala ananda..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              className="flex-1 border border-slate-205 rounded-xl px-4 py-2 text-xs outline-none focus:ring-1 focus:ring-teal-500 bg-white"
-            />
-            <button
-              id="send-chat-btn"
-              type="submit"
-              className="bg-teal-600 hover:bg-teal-700 text-white p-2.5 rounded-xl transition-all shadow-sm shrink-0 flex items-center justify-center w-10.5 h-10.5"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
         </div>
       )}
 
