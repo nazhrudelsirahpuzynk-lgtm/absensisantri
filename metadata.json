@@ -1,6 +1,6 @@
 {
-  "name": "TPQ Al Asyhar & Madin Miftahul Ulum 1 App",
-  "description": "Sistem Informasi & Pemantauan Santri, Wali Santri, dan Pengurus TPQ AL ASYHAR DAN MADIN MIFTAHUL ULUM 1 SIMA MOGA PEMALANG JAWA TENGAH dengan fitur pantau hafalan, jurnal ibadah, akademik, pembayaran SPP QRIS, perizinan, dan absensi digital.",
+  "name": "SI-Akademik TPQ Al-Asyhar",
+  "description": "Sistem Informasi & Pemantauan Akademik Santri Taman Pendidikan Al-Qur'an (TPA/TPQ) Al-Asyhar Pemalang dengan fitur evaluasi jilid/halaman harian, hafalan doa & fasholatan, materi terkelola ustadz, dan rapor penilaian santri secara real-time.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

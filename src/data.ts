@@ -21,12 +21,12 @@ export const initialSantri: Santri[] = [
     id: 's1',
     nama: 'Ahmad Faiz Al-Fatih',
     nis: '1212001',
-    kelas: 'Kelas 3 Awaliyah',
+    kelas: 'TPQ Kelas Al-Qur\'an & Tahfidz',
     namaWali: 'Bapak H. Rahman Hakim',
     teleponWali: '081234567890',
     kehadiranPercent: 98,
     juzTerakhir: 3,
-    catatanPelanggaran: ['Terlambat sholat jamaah Shubuh (Teguran lisan)'],
+    catatanPelanggaran: ['Terlambat murojaah pagi (Teguran lisan)'],
     noKK: '3327123456780001',
     nisn: '0087654321',
     nik: '3327120101080001',
@@ -41,7 +41,7 @@ export const initialSantri: Santri[] = [
     id: 's2',
     nama: 'Muhammad Yusuf An-Nabil',
     nis: '1212002',
-    kelas: 'Kelas 1 Awaliyah',
+    kelas: 'TPQ Kelas A (Jilid 1-2)',
     namaWali: 'Ibu Siti Khadijah',
     teleponWali: '081298765432',
     kehadiranPercent: 95,
@@ -61,7 +61,7 @@ export const initialSantri: Santri[] = [
     id: 's3',
     nama: 'Siti Aminah Zahra',
     nis: '1212003',
-    kelas: 'Kelas 2 Awaliyah',
+    kelas: 'TPQ Kelas B (Jilid 3-4)',
     namaWali: 'Bapak Ahmad Ridwan',
     teleponWali: '085712345678',
     kehadiranPercent: 100,
@@ -85,65 +85,65 @@ export const initialSetoran: SetoranHafalan[] = [
     santriId: 's1',
     tanggal: '2026-05-24',
     juz: 3,
-    surah: 'Fiqih (Safinatun Najah)',
-    ayatMulai: 85,
-    ayatSelesai: 92,
+    surah: 'Surat Al-Insyiqaq',
+    ayatMulai: 1,
+    ayatSelesai: 25,
     tipe: 'Setoran Baru',
     statusPenilaian: 'Sangat Lancar',
     ustadzPenguji: 'Ustadz Ahmad Fauzi',
-    catatan: 'Pemahaman rukun sholat dan thaharah sangat mumpuni. Pertahankan!'
+    catatan: 'Tajwid dan ketukan makhraj sangat konsisten. Lanjutkan ke surat berikutnya!'
   },
   {
     id: 'haf2',
     santriId: 's1',
     tanggal: '2026-05-23',
     juz: 3,
-    surah: 'Tauhid (Aqidatul Awam)',
-    ayatMulai: 80,
-    ayatSelesai: 88,
+    surah: 'Surat Al-Mutaffifin',
+    ayatMulai: 1,
+    ayatSelesai: 36,
     tipe: 'Murojaah',
     statusPenilaian: 'Lancar',
     ustadzPenguji: 'Ustadz Abdul Somad, Lc.',
-    catatan: 'Hafalan nadhom sifat wajib Allah sangat lancar.'
+    catatan: 'Kelancaran bagus, harap perkuat makhraj huruf dhood.'
   },
   {
     id: 'haf3',
     santriId: 's1',
     tanggal: '2026-05-22',
     juz: 3,
-    surah: 'Akhlaq (Taysirul Kholaq)',
-    ayatMulai: 78,
-    ayatSelesai: 85,
+    surah: 'Surat Al-Infitar',
+    ayatMulai: 1,
+    ayatSelesai: 19,
     tipe: 'Setoran Baru',
     statusPenilaian: 'Lancar',
     ustadzPenguji: 'Ustadz Hasan Basri',
-    catatan: 'Sifat adab kepada guru dan teman sangat baik.'
+    catatan: 'Sujud tilawah dipraktikkan dengan tertib.'
   },
   {
     id: 'haf4',
     santriId: 's2',
     tanggal: '2026-05-24',
     juz: 1,
-    surah: 'Nahwu (Jurumiyyah)',
-    ayatMulai: 75,
-    ayatSelesai: 80,
+    surah: 'Surat An-Naba',
+    ayatMulai: 1,
+    ayatSelesai: 20,
     tipe: 'Setoran Baru',
     statusPenilaian: 'Cukup',
     ustadzPenguji: 'Ustadz M. Syakir',
-    catatan: 'Perlu diperbanyak latihan i\'rab fi\'il dan isim.'
+    catatan: 'Mulai lancar, mohon diulang murojaahnya di rumah.'
   },
   {
     id: 'haf5',
     santriId: 's3',
     tanggal: '2026-05-24',
     juz: 2,
-    surah: 'Shorof (Amtsilah Tasrifiyyah)',
-    ayatMulai: 90,
-    ayatSelesai: 95,
+    surah: 'Surat An-Naziat',
+    ayatMulai: 1,
+    ayatSelesai: 46,
     tipe: 'Setoran Baru',
     statusPenilaian: 'Sangat Lancar',
     ustadzPenguji: 'Ustadz Hasan Basri',
-    catatan: 'Tasrif istilahi bab tsulatsi mujarrad sangat mantap.'
+    catatan: 'Hafalan kokoh dan lancar dengan lagu Rost.'
   }
 ];
 
@@ -152,7 +152,7 @@ export const initialTargets: TargetHafalan[] = [
     id: 't1',
     santriId: 's1',
     tipeTarget: 'Mingguan',
-    targetJuz: 'Juz 29',
+    targetJuz: 'Surat Al-Ghasyiyah',
     deadline: '2026-05-28',
     status: 'Sedang Berjalan'
   },
@@ -160,7 +160,7 @@ export const initialTargets: TargetHafalan[] = [
     id: 't2',
     santriId: 's1',
     tipeTarget: 'Bulanan',
-    targetJuz: 'Juz 29 & 28',
+    targetJuz: 'Surat An-Naba s.d Al-Infitar',
     deadline: '2026-06-15',
     status: 'Sedang Berjalan'
   },
@@ -168,7 +168,7 @@ export const initialTargets: TargetHafalan[] = [
     id: 't3',
     santriId: 's2',
     tipeTarget: 'Mingguan',
-    targetJuz: 'Juz 15 Selesai',
+    targetJuz: 'Surat Ad-Duha Selesai',
     deadline: '2026-05-28',
     status: 'Tercapai'
   }
@@ -199,7 +199,7 @@ export const initialJurnal: JurnalIbadah[] = [
     tanggal: '2026-05-25', // Hari ini
     sholatBerjamaah: {
       subuh: true,
-      dhuhur: false, // Belum berjalan penuh/masih pagi-siang
+      dhuhur: false,
       ashar: false,
       maghrib: false,
       isya: false
@@ -214,60 +214,72 @@ export const initialJurnal: JurnalIbadah[] = [
 ];
 
 export const initialJadwalPelajaran: JadwalPelajaran[] = [
-  { id: 'jp1', hari: 'Senin', jam: '07:30 - 09:00', mataPelajaran: 'Tauhid & Aqidah Khomsin', ustadz: 'Ustadz Ahmad Fauzi', kelas: 'Kelas 3 Awaliyah' },
-  { id: 'jp2', hari: 'Senin', jam: '09:15 - 10:45', mataPelajaran: 'Nahwu (Jurumiyyah)', ustadz: 'Ustadz M. Syakir', kelas: 'Kelas 1 Awaliyah' },
-  { id: 'jp3', hari: 'Selasa', jam: '07:30 - 09:00', mataPelajaran: 'Shorof (Amtsilah Tasrifiyyah)', ustadz: 'Ustadz Abdul Somad, Lc.', kelas: 'Kelas 2 Awaliyah' },
-  { id: 'jp4', hari: 'Selasa', jam: '09:15 - 10:45', mataPelajaran: 'Fadhilah Amal', ustadz: 'Ustadz Hasan Basri', kelas: 'Kelas 3 Awaliyah' },
-  { id: 'jp5', hari: 'Rabu', jam: '07:30 - 09:00', mataPelajaran: 'Fiqh (Safinatun Najah)', ustadz: 'Ustadz Ahmad Fauzi', kelas: 'Kelas 1 Awaliyah' },
-  { id: 'jp6', hari: 'Kamis', jam: '07:30 - 09:00', mataPelajaran: 'Akhlaq (Taysirul Kholaq)', ustadz: 'Ustadz Hasan Basri', kelas: 'Kelas 2 Awaliyah' }
+  { id: 'jp1', hari: 'Senin', jam: '16:00 - 17:30', mataPelajaran: 'Membaca Jilid & Al-Qur\'an', ustadz: 'Ustadz M. Syakir', kelas: 'TPQ Kelas A (Jilid 1-2)' },
+  { id: 'jp2', hari: 'Senin', jam: '16:00 - 17:30', mataPelajaran: 'Hafalan Surat Pendek / Juz \'Amma', ustadz: 'Ustadz Ahmad Fauzi', kelas: 'TPQ Kelas Al-Qur\'an & Tahfidz' },
+  { id: 'jp3', hari: 'Selasa', jam: '16:00 - 17:30', mataPelajaran: 'Doa-Doa Pilihan & Adab Harian Santri', ustadz: 'Ustadz Hasan Basri', kelas: 'TPQ Kelas B (Jilid 3-4)' },
+  { id: 'jp4', hari: 'Selasa', jam: '16:00 - 17:30', mataPelajaran: 'Praktik Gerakan Wudhu & Shalat Fardhu', ustadz: 'Ustadz Hasan Basri', kelas: 'TPQ Kelas C (Jilid 5-6)' },
+  { id: 'jp5', hari: 'Rabu', jam: '16:00 - 17:30', mataPelajaran: 'Dinul Islam (Aqidah Akhlaq & Siroh Nabawiyah)', ustadz: 'Ustadz Abdul Somad, Lc.', kelas: 'TPQ Kelas Al-Qur\'an & Tahfidz' },
+  { id: 'jp6', hari: 'Kamis', jam: '16:00 - 17:30', mataPelajaran: 'Membaca Jilid & Al-Qur\'an', ustadz: 'Ustadz M. Syakir', kelas: 'TPQ Kelas C (Jilid 5-6)' }
 ];
 
 export const initialJadwalNgaji: JadwalNgaji[] = [
-  { id: 'jn1', hari: 'Setiap Hari', jam: 'Ba\'da Shubuh', kitab: 'Hifdzul Quran (Setoran)', ustadz: 'Ustadz Abdul Somad, Lc.', lokasi: 'Masjid Utama' },
-  { id: 'jn2', hari: 'Setiap Hari', jam: 'Ba\'da Ashar', kitab: 'Murojaah & Halaqah Tajwid', ustadz: 'Ustadz M. Syakir', lokasi: 'Serambi Masjid' },
-  { id: 'jn3', hari: 'Senin & Rabu', jam: 'Ba\'da Maghrib', kitab: 'Kitab Riyadhus Shalihin', ustadz: 'KH. Miftah Al-Arifin', lokasi: 'Masjid Utama' },
-  { id: 'jn4', hari: 'Selasa & Kamis', jam: 'Ba\'da Maghrib', kitab: 'Kitab Ta\'limul Muta\'allim', ustadz: 'KH. Miftah Al-Arifin', lokasi: 'Masjid Utama' }
+  { id: 'jn1', hari: 'Setiap Hari', jam: 'Ba\'da Shubuh', kitab: 'Halaqah Tahfidz Mandiri', ustadz: 'Ustadz Abdul Somad, Lc.', lokasi: 'Masjid Utama' },
+  { id: 'jn2', hari: 'Setiap Hari', jam: 'Ba\'da Ashar', kitab: 'Simakan Jilid & Al-Qur\'an Berantai', ustadz: 'Ustadz M. Syakir', lokasi: 'Serambi Masjid' },
+  { id: 'jn3', hari: 'Senin & Rabu', jam: 'Ba\'da Maghrib', kitab: 'Pengajian Tajwid Praktis', ustadz: 'KH. Miftah Al-Arifin', lokasi: 'Masjid Utama' },
+  { id: 'jn4', hari: 'Selasa & Kamis', jam: 'Ba\'da Maghrib', kitab: 'Kisah Islami & Adab Nabawiyah', ustadz: 'KH. Miftah Al-Arifin', lokasi: 'Masjid Utama' }
 ];
 
 export const initialNilaiUjian: NilaiUjian[] = [
-  { id: 'nu1', santriId: 's1', mataPelajaran: 'Nahwu Jurumiyyah', nilai: 88, tipeUjian: 'PTS', catatan: 'Paham konsep kalam dan i\'rab dengan baik.' },
-  { id: 'nu2', santriId: 's1', mataPelajaran: 'Fiqh Safinah', nilai: 95, tipeUjian: 'PTS', catatan: 'Sangat menguasai bab bersuci dan rukun sholat.' },
-  { id: 'nu3', santriId: 's1', mataPelajaran: 'Tauhid Aqidatul Awam', nilai: 90, tipeUjian: 'PAS', catatan: 'Mumtaz hafalan nadhom silsilah nabi.' },
-  { id: 'nu4', santriId: 's2', mataPelajaran: 'Nahwu Jurumiyyah', nilai: 75, tipeUjian: 'PTS', catatan: 'Tingkatkan latihan i\'rab fi\'il.' }
+  { id: 'nu1', santriId: 's1', mataPelajaran: 'Membaca Al-Qur\'an & Kaidah Ghorib Tajwid', nilai: 92, tipeUjian: 'PAS', catatan: 'Paham hukum makhraj dhood dan nun mati dengan kokoh.' },
+  { id: 'nu2', santriId: 's1', mataPelajaran: 'Hafalan Surat Pendek / Juz \'Amma', nilai: 88, tipeUjian: 'PTS', catatan: 'Sangat lancar makhraj Surat Al-Insyirah s.d Al-Ma`un.' },
+  { id: 'nu3', santriId: 's1', mataPelajaran: 'Doa-Doa Pilihan & Adab Harian Santri', nilai: 95, tipeUjian: 'PAS', catatan: 'Melafalkan doa harian lengkap beserta kesantunan adab islam harian.' },
+  { id: 'nu4', santriId: 's1', mataPelajaran: 'Praktik Gerakan Wudhu & Shalat Fardhu', nilai: 90, tipeUjian: 'PTS', catatan: 'Ketertiban gerakan shalat fardhu subuh dengan doa qunut telah disimak.' },
+  { id: 'nu5', santriId: 's2', mataPelajaran: 'Membaca Al-Qur\'an & Kaidah Ghorib Tajwid', nilai: 78, tipeUjian: 'PTS', catatan: 'Lulus evaluasi jilid dasar dengan makhraj huruf mad yang baik.' }
 ];
 
 export const initialMateriKitab: MateriKitab[] = [
   {
     id: 'mk1',
-    judul: 'Kitab Safinatun Najah',
-    pengarang: 'Syeikh Salim bin Sumair Al-Hadhrami',
-    deskripsi: 'Kitab ringkas fiqih ibadah madzhab Syafi\'i meliputi rukun islam, rukun iman, thaharah, dan sholat.',
-    babAktif: 'Fasal Ketentuan Bersuci & Macam-Macam Air',
-    linkReferensi: 'https://archive.org/details/safinatun-najah'
+    judul: 'Membaca Al-Qur\'an & Kaidah Ghorib Tajwid',
+    pengarang: 'Lajnah Pentashih TPQ Al-Asyhar',
+    deskripsi: 'Kaidah makharijul huruf, sifatul huruf, hukum nun mati, mim mati, mad aridl lissukun, dan tanda waqaf.',
+    babAktif: 'Buku Jilid Tajwid Praktis - Bab Mad Lazim-Ghorib'
   },
   {
     id: 'mk2',
-    judul: 'Kitab Matan Al-Jurumiyyah',
-    pengarang: 'Ibnu Ajurrum',
-    deskripsi: 'Kitab dasar ilmu alat bahasa Arab (Nahwu) yang mutlak dipelajari santri pemula pesantren.',
-    babAktif: 'Bab Al-I\'rab (Perubahan Akhir Kalimah)',
-    linkReferensi: 'https://archive.org/details/matan-al-jurumiyyah'
+    judul: 'Hafalan Surat Pendek / Juz \'Amma',
+    pengarang: 'Ustadz & Ustadzah TPQ',
+    deskripsi: 'Kelancaran hafalan dari Surat An-Naas sampai Surat An-Naba’ beserta makhraj yang benar.',
+    babAktif: 'Surat Al-Insyiqaq s.d Al-Mutaffifin'
   },
   {
     id: 'mk3',
-    judul: 'Kitab Ta\'limul Muta\'allim',
-    pengarang: 'Syeikh Al-Zarnuji',
-    deskripsi: 'Kitab panduan akhlak dan adab penuntut ilmu agar memperoleh ilmu yang berkah dan bermanfaat.',
-    babAktif: 'Fasal Memilih Ilmu, Ustadz, Sahabat dan Istiqomah',
-    linkReferensi: 'https://archive.org/details/talimul-mutaallim'
+    judul: 'Doa-Doa Pilihan & Adab Harian Santri',
+    pengarang: 'Komisi Kurikulum TPQ',
+    deskripsi: 'Melafalkan doa-doa harian lengkap beserta kesantunan adab islam harian.',
+    babAktif: 'Doa Masuk Masjid & Doa Untuk Orang Tua'
+  },
+  {
+    id: 'mk4',
+    judul: 'Praktik Gerakan Wudhu & Shalat Fardhu',
+    pengarang: 'Pengurus Syariah TPA',
+    deskripsi: 'Ketertiban rukun fi\'liyah dan qauliyah shalat lima waktu serta kesempurnaan wudhu.',
+    babAktif: 'Kaidah Tasyahhud Akhir & Doa Qunut'
+  },
+  {
+    id: 'mk5',
+    judul: 'Dinul Islam (Aqidah Akhlaq & Siroh Nabawiyah)',
+    pengarang: 'Tim Dakwah TPQ',
+    deskripsi: 'Dasar aqidah akhlaqul karimah serta meneladani rukun sejarah hidup nabi Muhammad SAW.',
+    babAktif: 'Silsilah Keluarga & Sifat Siddiq Amanah'
   }
 ];
 
 export const initialTagihanSPP: TagihanSPP[] = [
-  { id: 'spp1', santriId: 's1', bulan: 'Mei 2026', jumlah: 350000, status: 'Lunas', tanggalBayar: '2026-05-10', invoiceNumber: 'INV/202605/023', metodeBayar: 'Transfer Mandiri' },
-  { id: 'spp2', santriId: 's1', bulan: 'Juni 2026', jumlah: 350000, status: 'Belum Bayar', invoiceNumber: 'INV/202606/001' },
-  { id: 'spp3', santriId: 's2', bulan: 'Mei 2026', jumlah: 350000, status: 'Lunas', tanggalBayar: '2026-05-12', invoiceNumber: 'INV/202605/054', metodeBayar: 'QRIS Gopay' },
-  { id: 'spp4', santriId: 's2', bulan: 'Juni 2026', jumlah: 350000, status: 'Menunggu Konfirmasi', tanggalBayar: '2026-05-24', invoiceNumber: 'INV/202606/002', metodeBayar: 'QRIS' }
+  { id: 'spp1', santriId: 's1', bulan: 'Mei 2026', jumlah: 50000, status: 'Lunas', tanggalBayar: '2026-05-10', invoiceNumber: 'INV/202605/023', metodeBayar: 'QRIS Gopay' },
+  { id: 'spp2', santriId: 's1', bulan: 'Juni 2026', jumlah: 50000, status: 'Belum Bayar', invoiceNumber: 'INV/202606/001' },
+  { id: 'spp3', santriId: 's2', bulan: 'Mei 2026', jumlah: 50000, status: 'Lunas', tanggalBayar: '2026-05-12', invoiceNumber: 'INV/202605/054', metodeBayar: 'QRIS OVO' },
+  { id: 'spp4', santriId: 's2', bulan: 'Juni 2026', jumlah: 50000, status: 'Menunggu Konfirmasi', tanggalBayar: '2026-05-24', invoiceNumber: 'INV/202606/002', metodeBayar: 'QRIS Shopee' }
 ];
 
 export const initialPerizinan: Perizinan[] = [

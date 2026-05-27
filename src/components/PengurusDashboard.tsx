@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GoogleSheetsSync from './GoogleSheetsSync';
 import {
   Santri,
@@ -8,7 +8,9 @@ import {
   Perizinan,
   JadwalPelajaran,
   Ustadz,
-  PenilaianJilid
+  PenilaianJilid,
+  NilaiUjian,
+  MateriKitab
 } from '../types';
 import {
   Shield,
@@ -45,12 +47,13 @@ const LEVEL_ORDER = [
   "Jilid 3",
   "Jilid 4",
   "Jilid 5",
+  "Jilid 6",
   "Al-Qur'an 1",
   "Al-Qur'an 2",
-  "Kelas 1 Awaliyah",
-  "Kelas 2 Awaliyah",
-  "Kelas 3 Awaliyah",
-  "Kelas 4 Awaliyah"
+  "TPQ Kelas A (Jilid 1-2)",
+  "TPQ Kelas B (Jilid 3-4)",
+  "TPQ Kelas C (Jilid 5-6)",
+  "TPQ Kelas Al-Qur'an & Tahfidz"
 ];
 
 const getNextLevel = (currentLevel: string): string => {
@@ -74,6 +77,8 @@ interface PengurusDashboardProps {
   jadwalPelajaranList: JadwalPelajaran[];
   ustadzList: Ustadz[];
   penilaianJilidList: PenilaianJilid[];
+  nilaiUjianList: NilaiUjian[];
+  materiKitabList: MateriKitab[];
   onAddSetoran: (newSetoran: Omit<SetoranHafalan, 'id'>) => void;
   onAddKeuangan: (newKeuangan: Omit<KeuanganPondok, 'id'>) => void;
   onUpdateTagihanStatus: (tagihanId: string, status: TagihanSPP['status']) => void;
@@ -86,6 +91,12 @@ interface PengurusDashboardProps {
   onAddUstadz: (newUstadz: Omit<Ustadz, 'id'>) => void;
   onDeleteUstadz: (id: string) => void;
   onAddPenilaianJilid: (newPenilaian: Omit<PenilaianJilid, 'id'>) => void;
+  onAddJadwalPelajaran: (newJadwal: Omit<JadwalPelajaran, 'id'>) => void;
+  onDeleteJadwalPelajaran: (id: string) => void;
+  onAddNilaiUjian: (newNilai: Omit<NilaiUjian, 'id'>) => void;
+  onDeleteNilaiUjian: (id: string) => void;
+  onAddMateriKitab: (newMateri: Omit<MateriKitab, 'id'>) => void;
+  onDeleteMateriKitab: (id: string) => void;
 }
 
 export default function PengurusDashboard({
@@ -97,6 +108,8 @@ export default function PengurusDashboard({
   jadwalPelajaranList,
   ustadzList,
   penilaianJilidList,
+  nilaiUjianList,
+  materiKitabList,
   onAddSetoran,
   onAddKeuangan,
   onUpdateTagihanStatus,
@@ -108,11 +121,32 @@ export default function PengurusDashboard({
   onBulkPromote,
   onAddUstadz,
   onDeleteUstadz,
-  onAddPenilaianJilid
+  onAddPenilaianJilid,
+  onAddJadwalPelajaran,
+  onDeleteJadwalPelajaran,
+  onAddNilaiUjian,
+  onDeleteNilaiUjian,
+  onAddMateriKitab,
+  onDeleteMateriKitab
 }: PengurusDashboardProps) {
+
+  // Schedule Form States
+  const [showAddJadwalForm, setShowAddJadwalForm] = useState(false);
+  const [newJadwalHari, setNewJadwalHari] = useState('Senin');
+  const [newJadwalJam, setNewJadwalJam] = useState('07:30 - 09:00');
+  const [newJadwalPelajaran, setNewJadwalPelajaran] = useState('');
+
+  // Material Form States
+  const [newMateriJudul, setNewMateriJudul] = useState('');
+  const [newMateriPengarang, setNewMateriPengarang] = useState('');
+  const [newMateriDeskripsi, setNewMateriDeskripsi] = useState('');
+  const [newMateriBabAktif, setNewMateriBabAktif] = useState('');
+  const [materiSuccess, setMateriSuccess] = useState('');
+  const [newJadwalKelas, setNewJadwalKelas] = useState('TPQ Kelas A (Jilid 1-2)');
+  const [newJadwalUstadz, setNewJadwalUstadz] = useState('Ustadz Abdul Somad, Lc.');
   // Tabs
-  const [activeTab, setActiveTab] = useState<'stats' | 'santri' | 'absensi' | 'keuangan' | 'kelas' | 'ustadz' | 'sheets'>('stats');
-  const [kelasSubTab, setKelasSubTab] = useState<'tahfidz' | 'jilid'>('tahfidz');
+  const [activeTab, setActiveTab] = useState<'stats' | 'santri' | 'absensi' | 'kelas' | 'ustadz' | 'sheets'>('stats');
+  const [kelasSubTab, setKelasSubTab] = useState<'kurikulum' | 'jilid' | 'tahfidz' | 'akademik'>('kurikulum');
 
   // Keuangan Form States
   const [keuanganTipe, setKeuanganTipe] = useState<'Pemasukan' | 'Pengeluaran'>('Pengeluaran');
@@ -127,10 +161,24 @@ export default function PengurusDashboard({
   const [gradeSurah, setGradeSurah] = useState<string>('');
   const [gradeAyatMulai, setGradeAyatMulai] = useState<number>(80);
   const [gradeAyatSelesai, setGradeAyatSelesai] = useState<number>(85);
-  const [gradeTipe, setGradeTipe] = useState<'Setoran Baru' | 'Murojaah'>('Setoran Baru');
-  const [gradeStatus, setGradeStatus] = useState<SetoranHafalan['statusPenilaian']>('Sangat Lancar');
+  const [gradeTipe, setGradeTipe] = useState<string>('Penilaian Harian');
+  const [gradeStatus, setGradeStatus] = useState<string>('Sangat Lancar');
   const [gradeCatatan, setGradeCatatan] = useState<string>('');
   const [gradeSuccess, setGradeSuccess] = useState<string>('');
+
+  // Custom states for Tahfidz setoran
+  const [tahfidzSantriId, setTahfidzSantriId] = useState<string>(allSantri[0]?.id || '');
+  const [tahfidzJuz, setTahfidzJuz] = useState<number>(30);
+  const [tahfidzSurah, setTahfidzSurah] = useState<string>('An-Naba');
+  const [tahfidzAyatMulai, setTahfidzAyatMulai] = useState<number>(1);
+  const [tahfidzAyatSelesai, setTahfidzAyatSelesai] = useState<number>(40);
+  const [tahfidzTipe, setTahfidzTipe] = useState<'Setoran Baru' | 'Murojaah'>('Setoran Baru');
+  const [tahfidzStatus, setTahfidzStatus] = useState<SetoranHafalan['statusPenilaian']>('Sangat Lancar');
+  const [tahfidzUstadz, setTahfidzUstadz] = useState<string>(ustadzList[0]?.nama || 'Ustadz M. Syakir');
+  const [tahfidzCatatan, setTahfidzCatatan] = useState<string>('');
+  const [tahfidzSuccess, setTahfidzSuccess] = useState<string>('');
+  const [tahfidzSearch, setTahfidzSearch] = useState<string>('');
+  const [tahfidzFilterJuz, setTahfidzFilterJuz] = useState<string>('Semua');
 
   // Penilaian Jilid (1-5) & Al-Qur'an (1-2) Form States
   const [jilidSantriId, setJilidSantriId] = useState<string>(allSantri[0]?.id || '');
@@ -142,6 +190,15 @@ export default function PengurusDashboard({
   const [jilidUstadz, setJilidUstadz] = useState<string>('Ustadz M. Syakir');
   const [jilidCatatan, setJilidCatatan] = useState<string>('');
   const [jilidSuccess, setJilidSuccess] = useState<string>('');
+
+  // Sychronize drop selections on mount & changes
+  useEffect(() => {
+    if (allSantri.length > 0) {
+      if (!gradeSantriId) setGradeSantriId(allSantri[0].id);
+      if (!jilidSantriId) setJilidSantriId(allSantri[0].id);
+      if (!tahfidzSantriId) setTahfidzSantriId(allSantri[0].id);
+    }
+  }, [allSantri, gradeSantriId, jilidSantriId, tahfidzSantriId]);
 
   // Attendance Simulator States
   const [todayAbsensiMap, setTodayAbsensiMap] = useState<Record<string, 'Hadir' | 'Sakit' | 'Izin' | 'Alpha'>>(() => {
@@ -156,7 +213,7 @@ export default function PengurusDashboard({
   // Tambah Santri Form States
   const [newSantriNama, setNewSantriNama] = useState<string>('');
   const [newSantriNis, setNewSantriNis] = useState<string>('');
-  const [newSantriKelas, setNewSantriKelas] = useState<string>('Kelas 1 Awaliyah');
+  const [newSantriKelas, setNewSantriKelas] = useState<string>('TPQ Kelas A (Jilid 1-2)');
   const [newSantriNamaWali, setNewSantriNamaWali] = useState<string>('');
   const [newSantriTeleponWali, setNewSantriTeleponWali] = useState<string>('');
   const [newSantriJuz, setNewSantriJuz] = useState<number>(30);
@@ -215,28 +272,49 @@ export default function PengurusDashboard({
   const totalTagihanSpp = tagihanList.length;
   const lunasTagihanSpp = tagihanList.filter(t => t.status === 'Lunas').length;
 
-  // Grade form submission
+  // Grade form submission for TPQ Academic Appraisal
   const handleGradeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!gradeSurah.trim()) return;
+    const finalMataPelajaran = gradeSurah || (materiKitabList[0]?.judul || 'Membaca Al-Qur\'an & Kaidah Ghorib Tajwid');
 
-    onAddSetoran({
+    // Map string values to NilaiUjian limits
+    const mappedTipeUjian = (val: string): 'PTS' | 'PAS' | 'Ujian Bulanan' => {
+      if (val === 'Ujian Tengah Semester' || val === 'PTS') return 'PTS';
+      if (val === 'Ujian Akhir Semester' || val === 'PAS') return 'PAS';
+      return 'Ujian Bulanan';
+    };
+
+    const calculatedAvgNilai = Math.min(100, Math.max(0, Math.round((Number(gradeAyatMulai) + Number(gradeAyatSelesai)) / 2)));
+
+    onAddNilaiUjian({
       santriId: gradeSantriId,
-      tanggal: new Date().toISOString().split('T')[0],
-      juz: Number(gradeJuz),
-      surah: gradeSurah,
-      ayatMulai: Number(gradeAyatMulai),
-      ayatSelesai: Number(gradeAyatSelesai),
-      tipe: gradeTipe,
-      statusPenilaian: gradeStatus,
-      ustadzPenguji: 'Ustadz Abdul Somad, Lc. (Sistem)',
-      catatan: gradeCatatan || 'Lulus penilaian evaluasi tatap muka.'
+      mataPelajaran: finalMataPelajaran,
+      nilai: calculatedAvgNilai,
+      tipeUjian: mappedTipeUjian(gradeTipe),
+      catatan: `Nilai Tugas: ${gradeAyatMulai}, Nilai Ujian: ${gradeAyatSelesai}. Predikat: ${gradeStatus}. ${gradeCatatan || 'Lulus evaluasi mata pelajaran.'}`
     });
 
-    setGradeSurah('');
+    const targetSubjectName = finalMataPelajaran;
     setGradeCatatan('');
-    setGradeSuccess(`Berhasil memberi nilai untuk santri ${allSantri.find(s => s.id === gradeSantriId)?.nama}!`);
+    setGradeSuccess(`Berhasil mengesahkan nilai mata pelajaran [${targetSubjectName}] untuk santri ${allSantri.find(s => s.id === gradeSantriId)?.nama}!`);
     setTimeout(() => setGradeSuccess(''), 4000);
+  };
+
+  const handleMateriSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMateriJudul.trim()) return;
+    onAddMateriKitab({
+      judul: newMateriJudul,
+      pengarang: newMateriPengarang || 'Komisi Akademik TPQ',
+      deskripsi: newMateriDeskripsi || 'materi pelajaran harian dasar',
+      babAktif: newMateriBabAktif || 'Bab 1'
+    });
+    setNewMateriJudul('');
+    setNewMateriPengarang('');
+    setNewMateriDeskripsi('');
+    setNewMateriBabAktif('');
+    setMateriSuccess(`Berhasil menambahkan materi: "${newMateriJudul}"`);
+    setTimeout(() => setMateriSuccess(''), 4000);
   };
 
   const handleJilidSubmit = (e: React.FormEvent) => {
@@ -269,6 +347,30 @@ export default function PengurusDashboard({
     setJilidCatatan('');
   };
 
+  const handleTahfidzSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const finalSantriId = tahfidzSantriId || allSantri[0]?.id;
+    if (!finalSantriId) return;
+
+    onAddSetoran({
+      santriId: finalSantriId,
+      tanggal: new Date().toISOString().split('T')[0],
+      juz: Number(tahfidzJuz),
+      surah: tahfidzSurah,
+      ayatMulai: Number(tahfidzAyatMulai),
+      ayatSelesai: Number(tahfidzAyatSelesai),
+      tipe: tahfidzTipe,
+      statusPenilaian: tahfidzStatus,
+      ustadzPenguji: tahfidzUstadz,
+      catatan: tahfidzCatatan || 'Lancar menyetorkan hafalan.'
+    });
+
+    const targetStudentName = allSantri.find(s => s.id === finalSantriId)?.nama || 'Santri';
+    setTahfidzCatatan('');
+    setTahfidzSuccess(`Alhamdulillah! Berhasil mengesahkan hafalan Juz ${tahfidzJuz} (${tahfidzSurah} ayat ${tahfidzAyatMulai}-${tahfidzAyatSelesai}) untuk santri ${targetStudentName}.`);
+    setTimeout(() => setTahfidzSuccess(''), 4000);
+  };
+
   // Keuangan ledger entry
   const handleKeuanganSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -285,6 +387,22 @@ export default function PengurusDashboard({
     setKeuanganKet('');
     setKeuanganSuccess('Laporan transaksi berhasil diinput ke dalam kas pondok!');
     setTimeout(() => setKeuanganSuccess(''), 4000);
+  };
+
+  const handleJadwalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newJadwalPelajaran.trim()) return;
+    onAddJadwalPelajaran({
+      hari: newJadwalHari,
+      jam: newJadwalJam,
+      mataPelajaran: newJadwalPelajaran,
+      kelas: newJadwalKelas,
+      ustadz: newJadwalUstadz
+    });
+    setNewJadwalPelajaran('');
+    setShowAddJadwalForm(false);
+    setGradeSuccess(`Alhamdulillah! Jadwal pelajaran baru berhasil dibuat.`);
+    setTimeout(() => setGradeSuccess(''), 4000);
   };
 
   // Expanded state initiators for complete Santri Management
@@ -649,7 +767,11 @@ export default function PengurusDashboard({
               <span className="text-xxs font-semibold bg-amber-600 text-white px-2 py-0.5 rounded uppercase font-sans">Panel Admin</span>
               <span className="text-xs text-slate-400 font-mono">Hak Akses: Pengurus Utama / Kepala Madrasah</span>
             </div>
-            <h2 className="text-xl font-bold text-slate-800 mt-1">Ustadz Abdul Somad, Lc.</h2>
+            <h2 className="text-xl font-bold text-slate-800 mt-1">
+              {ustadzList.some(u => u.nama === 'Ustadz Abdul Somad, Lc.') 
+                ? 'Ustadz Abdul Somad, Lc.' 
+                : (ustadzList[0]?.nama || 'Pengurus Utama / Kepala Madrasah')}
+            </h2>
             <p className="text-xs text-slate-500 font-medium">Selamat datang, Khidmah terbaik Anda mengalirkan ilmu yang berkah.</p>
           </div>
         </div>
@@ -697,17 +819,6 @@ export default function PengurusDashboard({
           Absensi Digital
         </button>
         <button
-          id="pengurus-tab-keuangan"
-          onClick={() => setActiveTab('keuangan')}
-          className={`shrink-0 flex-1 px-3 py-2 text-center rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'keuangan'
-              ? 'bg-amber-600 text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Akuntansi Kas
-        </button>
-        <button
           id="pengurus-tab-kelas"
           onClick={() => setActiveTab('kelas')}
           className={`shrink-0 flex-1 px-3 py-2 text-center rounded-lg text-xs font-semibold transition-all ${
@@ -748,7 +859,7 @@ export default function PengurusDashboard({
       {activeTab === 'stats' && (
         <div className="space-y-6">
           {/* Bento stats row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
               <span className="text-xxs font-mono text-slate-400 block uppercase mb-1 font-bold">Seluruh Santri Binaan</span>
               <div className="flex justify-between items-baseline">
@@ -770,14 +881,6 @@ export default function PengurusDashboard({
               <div className="flex justify-between items-baseline">
                 <span className="text-2xl font-extrabold text-teal-800">{lunasTagihanSpp} / {totalTagihanSpp}</span>
                 <span className="text-xxs text-slate-500 font-mono">lunas divalidasi</span>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-              <span className="text-xxs font-mono text-slate-400 block uppercase mb-1 font-bold">Saldo Sisa Dana Kas</span>
-              <div className="flex justify-between items-baseline">
-                <span className="text-xl font-bold text-slate-850">Rp {saldoSisa.toLocaleString('id-ID')}</span>
-                <span className="text-[10px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded font-bold">Surplus</span>
               </div>
             </div>
           </div>
@@ -957,491 +1060,344 @@ export default function PengurusDashboard({
             </div>
           </div>
         </div>
-      )}
-
-      {/* 3. Keuangan & Akuntansi */}
-      {activeTab === 'keuangan' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* SPP Payment validation desk */}
-            <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-2 border-b border-slate-100">
-                <h3 className="font-bold text-slate-800 text-sm">Validasi Pembayaran SPP Syahriah</h3>
-                {/* Filters */}
-                <div className="flex gap-1">
-                  {(['Semua', 'Menunggu Konfirmasi', 'Lunas', 'Belum Bayar'] as const).map(f => (
-                    <button
-                      key={f}
-                      id={`filter-spp-${f}`}
-                      onClick={() => setSppFilter(f)}
-                      className={`text-[9px] font-bold px-2 py-1 rounded transition-all ${
-                        sppFilter === f
-                          ? 'bg-slate-800 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-205'
-                      }`}
-                    >
-                      {f === 'Menunggu Konfirmasi' ? 'Pending Rev' : f}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {filteredTagihan.map(t => {
-                  const s = allSantri.find(san => san.id === t.santriId) || allSantri[0];
-                  return (
-                    <div key={t.id} className="p-3 rounded-2 shadow-xs border border-slate-150 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-slate-50/20 transition-all bg-slate-55/35">
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <h4 className="font-bold text-slate-800 text-xs">{s.nama}</h4>
-                          <span className="text-xxs bg-emerald-50 text-emerald-800 border-emerald-100 border px-1.5 py-0.5 rounded-full">{t.bulan}</span>
-                        </div>
-                        <span className="text-xxxs font-mono text-slate-400 block mt-0.5">{t.invoiceNumber}</span>
-                        <span className="text-xxs font-bold text-slate-650 block mt-1">Biaya: Rp {t.jumlah.toLocaleString('id-ID')}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2.5">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                          t.status === 'Lunas'
-                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-100'
-                            : t.status === 'Menunggu Konfirmasi'
-                            ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                            : 'bg-rose-50 text-rose-800 border border-rose-150'
-                        }`}>
-                          {t.status}
-                        </span>
-
-                        {t.status === 'Menunggu Konfirmasi' && (
-                          <button
-                            id={`verify-spp-btn-${t.id}`}
-                            onClick={() => onUpdateTagihanStatus(t.id, 'Lunas')}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xxs px-2.5 py-1 rounded transition-all flex items-center gap-1 shadow-sm"
-                          >
-                            <Check className="w-3" />
-                            <span>Sahkan Lunas</span>
-                          </button>
-                        )}
-                        {t.status === 'Belum Bayar' && (
-                          <button
-                            id={`manual-pay-spp-btn-${t.id}`}
-                            onClick={() => onUpdateTagihanStatus(t.id, 'Lunas')}
-                            className="bg-slate-880 hover:bg-slate-900 text-white font-bold text-xxs px-2.5 py-1 rounded transition-all flex items-center gap-1 shadow-sm"
-                          >
-                            <DollarSign className="w-3" />
-                            <span>Setor Tunai</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* General Ledger Expense input form */}
-            <div>
-              <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-                <h3 className="font-bold text-slate-801 text-sm flex items-center gap-1.5 mb-1.5">
-                  <DollarSign className="w-4 h-4 text-amber-600" />
-                  Registrasi Pengeluaran / Pemasukan
-                </h3>
-                <p className="text-xxs text-slate-450 mb-4 font-normal">Input rincian debet atau kredit baru untuk laporan neraca keuangan pondok.</p>
-
-                {keuanganSuccess && (
-                  <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 p-3 rounded-xl mb-4 text-xs font-semibold">
-                    {keuanganSuccess}
-                  </div>
-                )}
-
-                <form onSubmit={handleKeuanganSubmit} className="space-y-3">
-                  <div>
-                    <label htmlFor="keuangan-tipe" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Klasifikasi</label>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <button
-                        id="keuangan-tipe-in"
-                        type="button"
-                        onClick={() => setKeuanganTipe('Pemasukan')}
-                        className={`py-1.5 text-xxs font-bold rounded-lg border transition-all ${
-                          keuanganTipe === 'Pemasukan'
-                            ? 'bg-emerald-50 border-emerald-300 text-emerald-820'
-                            : 'bg-white border-slate-200 text-slate-600'
-                        }`}
-                      >
-                        Pemasukan (Kredit)
-                      </button>
-                      <button
-                        id="keuangan-tipe-out"
-                        type="button"
-                        onClick={() => setKeuanganTipe('Pengeluaran')}
-                        className={`py-1.5 text-xxs font-bold rounded-lg border transition-all ${
-                          keuanganTipe === 'Pengeluaran'
-                            ? 'bg-rose-50 border-rose-250 text-rose-820'
-                            : 'bg-white border-slate-200 text-slate-600'
-                        }`}
-                      >
-                        Pengeluaran (Debet)
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="keuangan-kategori" className="block text-xxs font-bold text-slate-555 uppercase tracking-wider mb-1">Kategori Pos</label>
-                    <select
-                      id="keuangan-kategori"
-                      value={keuanganKategori}
-                      onChange={(e) => setKeuanganKategori(e.target.value)}
-                      className="w-full text-xs border border-slate-20d rounded-xl px-3 py-2 bg-white"
-                    >
-                      <option value="Operasional">Operasional Gedung/Fasilitas</option>
-                      <option value="Konsumsi">Bahan Makanan / Konsumsi Santri</option>
-                      <option value="Gaji Ustadz">Honor / Mukafah Guru Ustadz</option>
-                      <option value="Donasi/Infaq">Infaq / Hibah Masuk</option>
-                      <option value="Kitab & Pendidikan">Pengadaan Kitab & Meja Belajar</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="keuangan-jumlah" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Nominal Rupiah</label>
-                    <input
-                      id="keuangan-jumlah"
-                      type="number"
-                      value={keuanganJumlah}
-                      onChange={(e) => setKeuanganJumlah(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-201 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500 bg-white"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="keuangan-keterangan" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Deskripsi Transaksi</label>
-                    <input
-                      id="keuangan-keterangan"
-                      type="text"
-                      placeholder="Contoh: Belanja beras dapur santri"
-                      value={keuanganKet}
-                      onChange={(e) => setKeuanganKet(e.target.value)}
-                      className="w-full text-xs border border-slate-201 rounded-xl px-3 py-2 outline-none"
-                      required
-                    />
-                  </div>
-
-                  <button
-                    id="submit-keuangan-btn"
-                    type="submit"
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded-xl text-xs transition-all shadow-xs block text-center"
-                  >
-                    Simpan Riwayat Transaksi
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-
-          {/* Detailed ledger log */}
-          <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-            <h3 className="font-bold text-slate-800 text-sm mb-4">Mutasi Jurnal Kas Keuangan Pondok</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-450 uppercase font-bold tracking-wider">
-                    <th className="py-2.5">Tanggal</th>
-                    <th className="py-2.5">Jenis</th>
-                    <th className="py-2.5">Kategori Pos</th>
-                    <th className="py-2.5">Jumlah Nominal</th>
-                    <th className="py-2.5">Keterangan</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 font-medium">
-                  {keuanganList.slice().reverse().map(j => (
-                    <tr key={j.id} className="hover:bg-slate-50/50">
-                      <td className="py-3 font-mono text-slate-500">{j.tanggal}</td>
-                      <td className="py-3">
-                        <span className={`px-2 py-0.5 rounded text-xxs font-bold font-sans uppercase ${
-                          j.tipe === 'Pemasukan'
-                            ? 'bg-emerald-50 text-emerald-805 border border-emerald-110'
-                            : 'bg-rose-50 text-rose-805 border border-rose-110'
-                        }`}>
-                          {j.tipe}
-                        </span>
-                      </td>
-                      <td className="py-3 font-bold text-slate-700">{j.kategori}</td>
-                      <td className={`py-3 font-mono font-bold ${
-                        j.tipe === 'Pemasukan' ? 'text-emerald-700' : 'text-rose-700'
-                      }`}>
-                        {j.tipe === 'Pemasukan' ? '+' : '-'} Rp {j.jumlah.toLocaleString('id-ID')}
-                      </td>
-                      <td className="py-3 text-slate-500 italic text-xxs">{j.keterangan}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. Classroom Management & Appraisal */}
+      )}      {/* 4. Classroom Management & Appraisal */}
       {activeTab === 'kelas' && (
         <div className="space-y-6" id="kelas-and-appraisal-section">
-          {/* Sub Tab Switcher with pristine styled buttons */}
-          <div className="flex bg-slate-100 p-1 rounded-2xl max-w-md border border-slate-200">
+          {/* Sub Tab Switcher with 4 premium styled buttons */}
+          <div className="flex flex-wrap bg-slate-100 p-1 rounded-2xl max-w-2xl border border-slate-200">
             <button
-              id="subtab-tahfidz-btn"
-              onClick={() => setKelasSubTab('tahfidz')}
-              className={`flex-1 py-1.5 px-4 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                kelasSubTab === 'tahfidz'
+              id="subtab-kurikulum-btn"
+              onClick={() => setKelasSubTab('kurikulum')}
+              className={`flex-1 py-1.5 px-3 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                kelasSubTab === 'kurikulum'
                   ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-slate-650 hover:text-slate-900'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Madrasah Diniyah Awaliyah
+              Kurikulum & Jadwal
             </button>
             <button
               id="subtab-jilid-btn"
               onClick={() => setKelasSubTab('jilid')}
-              className={`flex-1 py-1.5 px-4 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 py-1.5 px-3 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 kelasSubTab === 'jilid'
                   ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-slate-655 hover:text-slate-900'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Evaluasi Jilid & Al-Qur'an
+              Bimbingan Jilid
+            </button>
+            <button
+              id="subtab-tahfidz-btn"
+              onClick={() => setKelasSubTab('tahfidz')}
+              className={`flex-1 py-1.5 px-3 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                kelasSubTab === 'tahfidz'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Setoran Tahfidz
+            </button>
+            <button
+              id="subtab-akademik-btn"
+              onClick={() => setKelasSubTab('akademik')}
+              className={`flex-1 py-1.5 px-3 text-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                kelasSubTab === 'akademik'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Nilai Akademik
             </button>
           </div>
 
-          {kelasSubTab === 'tahfidz' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in" id="tahfidz-content-panel">
-              {/* Clasrooms split view */}
-              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-6">
-                <h3 className="font-bold text-slate-800 text-sm pb-2 border-b border-slate-100 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-amber-600" />
-                  Pembagian Kelas Madrasah Diniyah Awaliyah & Pengampu
-                </h3>
+          {/* Subtabs rendering */}
+          {kelasSubTab === 'kurikulum' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in" id="kurikulum-management-panel">
+              {/* Left Column: Materials list & Schedules List */}
+              <div className="lg:col-span-2 space-y-6">
+                
+                {/* 1. Materials/Materi Kitab of the Madrasah */}
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-6">
+                  <div>
+                    <h3 className="font-bold text-slate-800 text-sm pb-2 border-b border-slate-100 flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-amber-600" />
+                        Kurikulum & Materi Cetak Utama TPQ Al-Asyhar
+                      </span>
+                      <span className="text-xxs font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded-lg font-bold">
+                        {materiKitabList.length} Materi Terdaftar
+                      </span>
+                    </h3>
+                    <p className="text-xxs text-slate-500 mt-2">Daftar buku panduan tajwid, bacaan ghorib, kitab aqidah akhlaq, serta buku bimbingan cetak yang resmi diajarkan.</p>
+                  </div>
 
-                {/* Split classrooms map */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {['Kelas 1 Awaliyah', 'Kelas 2 Awaliyah', 'Kelas 3 Awaliyah', 'Kelas 4 Awaliyah'].map(kls => {
-                    const classStudents = allSantri.filter(s => s.kelas === kls);
-                    const waliKelasMap: Record<string, string> = {
-                      'Kelas 1 Awaliyah': 'Ustadz M. Syakir',
-                      'Kelas 2 Awaliyah': 'Ustadz Hasan Basri',
-                      'Kelas 3 Awaliyah': 'Ustadz Ahmad Fauzi',
-                      'Kelas 4 Awaliyah': 'Ustadz Abdul Somad, Lc.'
-                    };
-                    const waliKelas = waliKelasMap[kls] || 'Ustadz Pengampu';
-                    return (
-                      <div key={kls} className="p-4 rounded-3xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between hover:border-amber-300 transition-all">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {materiKitabList.map((m) => (
+                      <div key={m.id} className="p-4 rounded-3xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between hover:border-amber-300 hover:shadow-2xs transition-all">
                         <div>
-                          <h4 className="font-bold text-amber-900 text-xs uppercase tracking-wider mb-2">{kls}</h4>
-                          <span className="text-xxs font-mono text-slate-500 block mb-3">Kepala/Wali Kelas: {waliKelas}</span>
-                          
-                          <div className="space-y-1.5">
-                            <span className="block text-xxxs text-slate-400 font-bold uppercase tracking-wider font-mono">Daftar Santri:</span>
-                            {classStudents.map(cs => (
-                              <div key={cs.id} className="text-xxs font-semibold text-slate-700 p-1 bg-white border border-slate-100 rounded">
-                                &bull; {cs.nama}
-                              </div>
-                            ))}
-                            {classStudents.length === 0 && (
-                              <div className="text-xxs text-slate-400 italic">Belum ada santri terdaftar di kelas ini.</div>
-                            )}
+                          <div className="flex justify-between items-start mb-2 gap-1">
+                            <h4 className="font-bold text-amber-900 text-xs uppercase tracking-wider">{m.judul}</h4>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onDeleteMateriKitab(m.id);
+                                setMateriSuccess(`Berhasil menghapus materi "${m.judul}".`);
+                                setTimeout(() => setMateriSuccess(''), 4000);
+                              }}
+                              className="p-1 text-slate-350 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
+                              title="Hapus Materi"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
+                          <span className="text-[10px] font-mono text-slate-500 block mb-2">Penyusun: {m.pengarang}</span>
+                          <p className="text-xxs text-slate-600 font-medium mb-3 leading-relaxed">{m.deskripsi}</p>
                         </div>
 
-                        <div className="text-xxs font-mono text-slate-450 mt-4 pt-2 border-t border-slate-205/65">
-                          Total: {classStudents.length} Santri
+                        <div className="text-[10px] font-mono text-slate-800 bg-amber-50/40 p-2 rounded-xl border border-amber-100 mt-2">
+                          Fokus Progress: <strong>{m.babAktif}</strong>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Jadwal ustadz */}
-                <div className="pt-2">
-                  <h4 className="font-bold text-slate-755 text-xs mb-3 font-mono">JADWAL USTADZ PENGAJAR MADRASAH</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-2">
-                    {jadwalPelajaranList.slice(0, 4).map(jp => (
-                      <div key={jp.id} className="p-3 rounded-2xl border border-slate-150 bg-white shadow-xxs">
-                        <div className="flex justify-between text-xxs font-semibold text-slate-400 mb-1">
-                          <span>{jp.hari} &bull; {jp.jam}</span>
-                          <span className="text-amber-700 bg-amber-50 px-1.5 rounded">{jp.kelas}</span>
-                        </div>
-                        <strong className="text-slate-800 text-xs block leading-tight">{jp.mataPelajaran}</strong>
-                        <span className="block text-xxs text-slate-500 font-medium mt-0.5">Ustadz: {jp.ustadz}</span>
                       </div>
                     ))}
+
+                    {materiKitabList.length === 0 && (
+                      <div className="col-span-2 text-center py-10 border border-dashed border-slate-200 bg-slate-50 rounded-2xl italic text-slate-400 text-xxs">
+                        Belum ada materi kurikulum terdaftar. Tambahkan di form sebelah kanan.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Scheduling Timetable (Jadwal Mengajar) */}
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-4">
+                  <div className="pb-3 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                        <Calendar className="w-5 h-5 text-amber-600" />
+                        Jadwal Belajar Mengajar Harian TPQ & Madin
+                      </h4>
+                      <p className="text-xxs text-slate-450 mt-1">Siar pembagian ustadz pengampu kelas, jam belajar, dan hari tugas resmi.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddJadwalForm(!showAddJadwalForm)}
+                      className="text-xxs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                    >
+                      {showAddJadwalForm ? 'Sembunyikan Form' : '⚙ Kelola Sesi Jadwal'}
+                    </button>
+                  </div>
+
+                  {/* Add Schedule collapsible container form */}
+                  {showAddJadwalForm && (
+                    <form onSubmit={handleJadwalSubmit} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 shrink-0 animate-fade-in text-slate-800">
+                      <h5 className="font-bold text-xs text-slate-700 flex items-center gap-1">✍ Input Jadwal Tatap Muka Mengajar</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Hari</label>
+                          <select
+                            value={newJadwalHari}
+                            onChange={(e) => setNewJadwalHari(e.target.value)}
+                            className="w-full text-xxs border border-slate-250 rounded-lg p-2 bg-white"
+                          >
+                            <option value="Senin">Senin</option>
+                            <option value="Selasa">Selasa</option>
+                            <option value="Rabu">Rabu</option>
+                            <option value="Kamis">Kamis</option>
+                            <option value="Jumat">Jumat</option>
+                            <option value="Sabtu">Sabtu</option>
+                            <option value="Ahad">Ahad</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Tingkatan / Kelas</label>
+                          <select
+                            value={newJadwalKelas}
+                            onChange={(e) => setNewJadwalKelas(e.target.value)}
+                            className="w-full text-xxs border border-slate-250 rounded-lg p-2 bg-white"
+                          >
+                            <option value="TPQ Kelas A (Jilid 1-2)">TPQ Kelas A (Jilid 1-2)</option>
+                            <option value="TPQ Kelas B (Jilid 3-4)">TPQ Kelas B (Jilid 3-4)</option>
+                            <option value="TPQ Kelas C (Jilid 5-Qur'an 1)">TPQ Kelas C (Jilid 5-Qur'an 1)</option>
+                            <option value="Madin Miftahul Ulum Awaliyah">Madin Miftahul Ulum Awaliyah</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Mata Pelajaran</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Kaidah Tajwid Praktis"
+                            value={newJadwalPelajaran}
+                            onChange={(e) => setNewJadwalPelajaran(e.target.value)}
+                            className="w-full text-xxs border border-slate-250 rounded-lg p-2 bg-white"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Rentang Jam</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 16:00 - 17:30"
+                            value={newJadwalJam}
+                            onChange={(e) => setNewJadwalJam(e.target.value)}
+                            className="w-full text-xxs border border-slate-250 rounded-lg p-2 bg-white"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Ustadz Pengawas</label>
+                          <select
+                            value={newJadwalUstadz}
+                            onChange={(e) => setNewJadwalUstadz(e.target.value)}
+                            className="w-full text-xxs border border-slate-250 rounded-lg p-2 bg-white"
+                          >
+                            {ustadzList.map(u => (
+                              <option key={u.id} value={u.nama}>{u.nama}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="flex items-end">
+                          <button
+                            type="submit"
+                            className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-xxs transition-all cursor-pointer shadow-xs"
+                          >
+                            Simpan Sesi Jadwal
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  )}
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-wider">
+                          <th className="py-2.5">Hari</th>
+                          <th className="py-2.5">Kelas / Madrasah</th>
+                          <th className="py-2.5">Kategori Pelajaran</th>
+                          <th className="py-2.5">Jam Belajar</th>
+                          <th className="py-2.5">Ustadz Pengampu</th>
+                          <th className="py-2.5 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {jadwalPelajaranList.map(j => (
+                          <tr key={j.id} className="hover:bg-slate-50/55 text-xxs font-medium font-sans">
+                            <td className="py-2 font-bold text-amber-900">{j.hari}</td>
+                            <td className="py-2 text-slate-700">{j.kelas}</td>
+                            <td className="py-2">
+                              <span className="bg-slate-105 text-slate-700 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide border border-slate-200">
+                                {j.mataPelajaran}
+                              </span>
+                            </td>
+                            <td className="py-2 text-slate-500 font-mono">{j.jam}</td>
+                            <td className="py-2 text-slate-700">{j.ustadz}</td>
+                            <td className="py-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => onDeleteJadwalPelajaran(j.id)}
+                                className="p-1 text-slate-350 hover:text-red-500 hover:bg-red-50 rounded-md transition-all cursor-pointer"
+                                title="Hapus Sesi Jadwal"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {jadwalPelajaranList.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="text-center py-6 text-slate-350 italic">Belum ada sesi jadwal diinput pengurus.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
 
-              {/* Evaluation Forms */}
-              <div>
-                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-                  <h3 className="font-bold text-slate-803 text-sm flex items-center gap-1.5 mb-1">
-                    <BookOpen className="w-5 h-5 text-amber-600" />
-                    Penilaian Pelajaran Madrasah Diniyah Awaliyah
-                  </h3>
-                  <p className="text-xxs text-slate-450 mb-4 font-normal">Form resmi ustadz pengampu untuk mengesahkan nilai & predikat pelajaran madrasah awaliyah santri.</p>
+              {/* Right Column: Add Materi Form */}
+              <div className="lg:col-span-1">
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm sticky top-6">
+                  <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5 mb-1">
+                    <Plus className="w-5 h-5 text-amber-600 bg-amber-50 rounded-lg p-0.5" />
+                    Tambah Kurikulum Baru
+                  </h4>
+                  <p className="text-xxs text-slate-450 mb-4 font-medium">Sahkan kitab atau materi studi baru ke kurikulum resmi TPQ Al-Asyhar.</p>
 
-                  {gradeSuccess && (
-                    <div className="bg-emerald-50 text-emerald-800 border border-emerald-250 p-3 rounded-xl mb-4 text-xs font-semibold">
-                      {gradeSuccess}
-                    </div>
+                  {materiSuccess && (
+                     <div className="bg-emerald-50 text-emerald-850 border border-emerald-200 p-3 rounded-xl mb-4 text-xxs font-bold">
+                       {materiSuccess}
+                     </div>
                   )}
 
-                  <form onSubmit={handleGradeSubmit} className="space-y-3">
+                  <form onSubmit={handleMateriSubmit} className="space-y-4 text-slate-800">
                     <div>
-                      <label htmlFor="grade-santri" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Pilih Nama Santri</label>
-                      <select
-                        id="grade-santri"
-                        value={gradeSantriId}
-                        onChange={(e) => setGradeSantriId(e.target.value)}
-                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
-                      >
-                        {allSantri.map(s => (
-                          <option key={s.id} value={s.id}>
-                            {s.nama} ({s.kelas})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label htmlFor="grade-juz" className="block text-xxs font-bold text-slate-555 uppercase tracking-wider mb-1">Kelas Madrasah</label>
-                        <select
-                          id="grade-juz"
-                          value={gradeJuz}
-                          onChange={(e) => setGradeJuz(Number(e.target.value))}
-                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
-                        >
-                          <option value={1}>Kelas 1 Awaliyah</option>
-                          <option value={2}>Kelas 2 Awaliyah</option>
-                          <option value={3}>Kelas 3 Awaliyah</option>
-                          <option value={4}>Kelas 4 Awaliyah</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="grade-surah" className="block text-xxs font-bold text-slate-555 uppercase tracking-wider mb-1">Mata Pelajaran</label>
-                        <input
-                          id="grade-surah"
-                          type="text"
-                          placeholder="Contoh: Fiqih, Nahwu, Tauhid"
-                          value={gradeSurah}
-                          onChange={(e) => setGradeSurah(e.target.value)}
-                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label htmlFor="grade-ayat-mulai" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Nilai Tugas (Harian)</label>
-                        <input
-                          id="grade-ayat-mulai"
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={gradeAyatMulai}
-                          onChange={(e) => setGradeAyatMulai(Number(e.target.value))}
-                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="grade-ayat-selesai" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Nilai Ujian Utama</label>
-                        <input
-                          id="grade-ayat-selesai"
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={gradeAyatSelesai}
-                          onChange={(e) => setGradeAyatSelesai(Number(e.target.value))}
-                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-amber-500"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label htmlFor="grade-tipe" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Sifat Ujian</label>
-                        <select
-                          id="grade-tipe"
-                          value={gradeTipe}
-                          onChange={(e) => setGradeTipe(e.target.value as any)}
-                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
-                        >
-                          <option value="Penilaian Harian">Penilaian Harian</option>
-                          <option value="Ujian Tengah Semester">Ujian Tengah Semester</option>
-                          <option value="Ujian Akhir Semester">Ujian Akhir Semester</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="grade-status" className="block text-xxs font-bold text-slate-555 uppercase tracking-wider mb-1">Predikat Kelulusan</label>
-                        <select
-                          id="grade-status"
-                          value={gradeStatus}
-                          onChange={(e) => setGradeStatus(e.target.value as any)}
-                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
-                        >
-                          <option value="Sangat Lancar">Mumtaz (Istimewa)</option>
-                          <option value="Lancar">Jayyid Jiddan (Sangat Baik)</option>
-                          <option value="Cukup">Jayyid (Baik)</option>
-                          <option value="Perlu Mengulang">Maqbul (Cukup)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor="grade-catatan" className="block text-xxs font-bold text-slate-555 uppercase tracking-wider mb-1">Catatan Guru Madrasah</label>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Nama Materi / Kitab</label>
                       <input
-                        id="grade-catatan"
                         type="text"
-                        placeholder="Makhraj sudah pas, perbaiki Ghunnah..."
-                        value={gradeCatatan}
-                        onChange={(e) => setGradeCatatan(e.target.value)}
-                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 outline-none"
+                        placeholder="Contoh: Bacaan Ghorib & Tajwid Praktis"
+                        value={newMateriJudul}
+                        onChange={(e) => setNewMateriJudul(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-amber-500"
                         required
                       />
                     </div>
 
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Penyusun / Pengarang</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Lajnah Pentashih Al-Asyhar"
+                        value={newMateriPengarang}
+                        onChange={(e) => setNewMateriPengarang(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-amber-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Fokus Bab Aktif Saat Ini</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Bab Mad Lazim Selesai"
+                        value={newMateriBabAktif}
+                        onChange={(e) => setNewMateriBabAktif(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-amber-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Cakupan Pembelajaran (Deskripsi)</label>
+                      <textarea
+                        rows={3}
+                        placeholder="Deskripsikan garis besar kompetensi..."
+                        value={newMateriDeskripsi}
+                        onChange={(e) => setNewMateriDeskripsi(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-amber-500"
+                        required
+                      ></textarea>
+                    </div>
+
                     <button
-                      id="submit-grade-btn"
                       type="submit"
-                      className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-xs block text-center"
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-sm block text-center cursor-pointer"
                     >
-                      Sahkan Nilai Setoran Santri
+                      Sahkan Kurikulum Baru
                     </button>
                   </form>
                 </div>
-
-                {/* Form Tambah Santri Baru */}
-                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm mt-6 text-center">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
-                    <UserPlus className="w-6 h-6" />
-                  </div>
-                  <h3 className="font-bold text-slate-803 text-sm mb-1">
-                    Registrasi Santri Terpusat
-                  </h3>
-                  <p className="text-xxs text-slate-450 mb-4 font-normal">
-                    Penerimaan dan manajemen biodata lengkap santri (KK, NIK, NISN, Silsilah Wali) sekarang berada di bawah navigasi terpusat "Manajemen Santri".
-                  </p>
-                  <button
-                    onClick={() => {
-                      setActiveTab('santri');
-                      handleStartAddNewSantri();
-                    }}
-                    type="button"
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-sm block text-center"
-                  >
-                    Buka Formulir Registrasi Lengkap
-                  </button>
-                </div>
               </div>
             </div>
-          ) : (
+          )}
+
+          {/* Subtab 2: Jilid Rendering (Bimbingan Kenaikan Jilid) */}
+          {kelasSubTab === 'jilid' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in" id="jilid-content-panel">
               {/* Left Column: history lists & curriculums */}
               <div className="lg:col-span-2 space-y-6">
@@ -1463,7 +1419,7 @@ export default function PengurusDashboard({
                         placeholder="Nama santri..."
                         value={jilidSearch}
                         onChange={(e) => setJilidSearch(e.target.value)}
-                        className="text-xxs border border-slate-200 rounded-xl px-2.5 py-1.5 outline-none font-medium focus:ring-1 focus:ring-amber-500 bg-slate-50"
+                        className="text-xxs border border-slate-200 rounded-xl px-2.5 py-1.5 outline-none font-medium focus:ring-1 focus:ring-amber-500 bg-slate-50 whitespace-nowrap"
                       />
                       <select
                         value={jilidFilter}
@@ -1492,7 +1448,7 @@ export default function PengurusDashboard({
                           <th className="py-2.5">Hafalan Doa Harian</th>
                           <th className="py-2.5">Hafalan Fasholatan</th>
                           <th className="py-2.5">Ustadz Penguji</th>
-                          <th className="py-2.5">Catatan</th>
+                          <th className="py-2.5 text-right font-bold">Catatan</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
@@ -1519,7 +1475,7 @@ export default function PengurusDashboard({
                                 <td className="py-2.5 font-medium text-slate-600">{p.hafalanDoaHarian}</td>
                                 <td className="py-2.5 font-medium text-slate-600">{p.hafalanFasholatan}</td>
                                 <td className="py-2.5 text-slate-500">{p.ustadzPenguji}</td>
-                                <td className="py-2.5 text-slate-400 italic max-w-[140px] truncate" title={p.catatan}>{p.catatan}</td>
+                                <td className="py-2.5 text-slate-400 italic max-w-[140px] truncate text-right font-mono" title={p.catatan}>{p.catatan}</td>
                               </tr>
                             );
                           })}
@@ -1547,22 +1503,22 @@ export default function PengurusDashboard({
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xxs leading-relaxed">
                     <div className="space-y-2">
-                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-150">
+                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-105">
                         <strong className="text-amber-805 block">Jilid 1 - Pengenalan Huruf Tunggal</strong>
                         <p className="text-slate-500 mt-0.5">Penekanan makhrojul huruf hijaiyah harakat fathah secara madzkur/pendek (tanpa mad).</p>
                         <span className="text-emerald-750 block font-bold mt-1">Hafalan Doa: Doa Sebelum Makan & Minum</span>
                       </div>
-                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-150">
+                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-105">
                         <strong className="text-amber-805 block">Jilid 2 - Huruf Sambung & Harakat Kasrah/Dhommah</strong>
                         <p className="text-slate-500 mt-0.5">Pelajaran huruf sambung dasar dengan variasi baris bawah dan depan lancar cepat.</p>
                         <span className="text-emerald-750 block font-bold mt-1">Hafalan Doa: Doa Sesudah Makan & Minum, Doa Masuk Kamar Mandi</span>
                       </div>
-                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-150">
+                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-105">
                         <strong className="text-amber-805 block">Jilid 3 - Mad, Tanwin & Huruf Panjang</strong>
                         <p className="text-slate-500 mt-0.5">Pengenalan ketukan alif-wawu-ya (mad thobi'i) serta baris dua/tanwin (fathatain, kasratain, dhommatain).</p>
                         <span className="text-emerald-750 block font-bold mt-1">Hafalan Doa: Doa Keluar Kamar Mandi, Doa Memakai Pakaian</span>
                       </div>
-                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-150">
+                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-105">
                         <strong className="text-amber-805 block">Jilid 4 - Sukun/Mati & Qalqalah</strong>
                         <p className="text-slate-500 mt-0.5">Latihan ketat mematikan huruf, makhraj mampat, hukum qalqalah kubro-sughro.</p>
                         <span className="text-emerald-750 block font-bold mt-1">Hafalan Doa: Doa Keluar Rumah, Doa Masuk Masjid</span>
@@ -1570,7 +1526,7 @@ export default function PengurusDashboard({
                     </div>
 
                     <div className="space-y-2">
-                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-150">
+                      <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-105">
                         <strong className="text-amber-805 block">Jilid 5 - Tasydid, Nun Sukun & Idgham</strong>
                         <p className="text-slate-500 mt-0.5">Penguasaan baris ganda (tasydid) lambang dobel serta hukum nun sukun/tanwin (Idgham/Ikhfa).</p>
                         <span className="text-emerald-750 block font-bold mt-1">Hafalan Doa: Doa Keluar Masjid, Doa Baik Kedua Orang Tua</span>
@@ -1590,14 +1546,14 @@ export default function PengurusDashboard({
                 </div>
               </div>
 
-              {/* Right Column: borang penilaian/form */}
+              {/* Right Column: form */}
               <div className="lg:col-span-1">
-                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm sticky top-6">
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm sticky top-6 text-slate-800">
                   <h4 className="font-bold text-slate-802 text-sm flex items-center gap-1.5 mb-1">
                     <BookOpen className="w-5 h-5 text-amber-600 bg-amber-55 rounded-lg p-0.5" />
                     Lembar Penilaian Jilid & Al-Qur'an
                   </h4>
-                  <p className="text-xxs text-slate-450 mb-4">Input progress kenaikan halaman jilid, fasholatan & doa harian santri.</p>
+                  <p className="text-xxs text-slate-450 mb-4 font-medium">Input progress kenaikan halaman jilid, fasholatan & doa harian santri.</p>
 
                   {jilidSuccess && (
                     <div className="bg-emerald-50 text-emerald-803 border border-emerald-250 p-3 rounded-xl mb-4 text-xs font-semibold animate-bounce">
@@ -1723,6 +1679,496 @@ export default function PengurusDashboard({
                       className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition-with-shadow shadow-sm"
                     >
                       Sahkan Nilai & Kenaikan Jilid
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Subtab 3: Setoran Tahfidz / Hafalan */}
+          {kelasSubTab === 'tahfidz' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in" id="tahfidz-content-panel">
+              {/* Left Column: history lists & filters */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                      <h4 className="font-bold text-slate-805 text-sm flex items-center gap-1.5">
+                        <Award className="w-5 h-5 text-emerald-600" />
+                        Kendali Surat Setoran & Progres Tahfidz Al-Qur'an
+                      </h4>
+                      <p className="text-xxs text-slate-400">Arsip digital setoran hafalan surah, nomor juz, ayat, dan catatan kelancaran tahfidz santri.</p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Cari santri..."
+                        value={tahfidzSearch}
+                        onChange={(e) => setTahfidzSearch(e.target.value)}
+                        className="text-xxs border border-slate-200 rounded-xl px-2.5 py-1.5 outline-none font-medium focus:ring-1 focus:ring-amber-500 bg-slate-50"
+                      />
+                      <select
+                        value={tahfidzFilterJuz}
+                        onChange={(e) => setTahfidzFilterJuz(e.target.value)}
+                        className="text-xxs border border-slate-200 rounded-xl px-2 py-1.5 outline-none font-medium bg-slate-50"
+                      >
+                        <option value="Semua">Semua Juz</option>
+                        {Array.from({ length: 30 }, (_, i) => (
+                          <option key={i + 1} value={String(i + 1)}>Juz {i + 1}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto mt-4">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-slate-405 font-bold text-[10px] uppercase tracking-wider">
+                          <th className="py-2.5">Santri</th>
+                          <th className="py-2.5">Tanggal</th>
+                          <th className="py-2.5">Juz</th>
+                          <th className="py-2.5">Surah & Ayat</th>
+                          <th className="py-2.5">Kategori</th>
+                          <th className="py-2.5 text-center">Hasil/Predikat</th>
+                          <th className="py-2.5">Ustadz Penguji</th>
+                          <th className="py-2.5 text-right font-mono">Catatan</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {setoranList
+                          .filter(s => {
+                            const student = allSantri.find(st => st.id === s.santriId);
+                            const nameMatches = student?.nama.toLowerCase().includes(tahfidzSearch.toLowerCase());
+                            const juzMatches = tahfidzFilterJuz === 'Semua' || String(s.juz) === tahfidzFilterJuz;
+                            return nameMatches && juzMatches;
+                          })
+                          .map((s) => {
+                            const student = allSantri.find(st => st.id === s.santriId);
+                            const categoryTheme = s.tipe === 'Murojaah'
+                              ? 'bg-indigo-50 text-indigo-850 hover:bg-indigo-100'
+                              : 'bg-emerald-50 text-emerald-850 hover:bg-emerald-100';
+                            
+                            const ratingTheme = {
+                              'Sangat Lancar': 'bg-teal-50 text-teal-800 border-teal-200',
+                              'Lancar': 'bg-emerald-50 text-emerald-800 border-emerald-150',
+                              'Cukup': 'bg-amber-50 text-amber-800 border-amber-200',
+                              'Perlu Mengulang': 'bg-rose-50 text-rose-800 border-rose-200'
+                            }[s.statusPenilaian] || 'bg-slate-50 text-slate-600';
+
+                            return (
+                              <tr key={s.id} className="hover:bg-slate-50/50 transition-all font-sans text-xxs">
+                                <td className="py-2.5 font-bold text-slate-800">{student?.nama || 'Santri'}</td>
+                                <td className="py-2.5 text-slate-450 font-mono">{s.tanggal}</td>
+                                <td className="py-2.5 font-bold text-slate-600">Juz {s.juz}</td>
+                                <td className="py-2.5 font-bold text-slate-700">
+                                  QS. {s.surah} <span className="font-mono font-medium text-slate-400">({s.ayatMulai}-{s.ayatSelesai})</span>
+                                </td>
+                                <td className="py-2.5">
+                                  <span className={`px-1.5 py-0.5 rounded-md font-bold text-[9px] uppercase font-mono ${categoryTheme}`}>
+                                    {s.tipe}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 text-center">
+                                  <span className={`px-2 py-0.5 rounded-full border text-[9px] font-bold ${ratingTheme}`}>
+                                    {s.statusPenilaian}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 font-medium text-slate-650">{s.ustadzPenguji.split(',')[0]}</td>
+                                <td className="py-2.5 text-slate-400 italic font-medium text-right" title={s.catatan}>{s.catatan}</td>
+                              </tr>
+                            );
+                          })}
+
+                        {setoranList.filter(s => {
+                          const student = allSantri.find(st => st.id === s.santriId);
+                          const nameMatches = student?.nama.toLowerCase().includes(tahfidzSearch.toLowerCase());
+                          const juzMatches = tahfidzFilterJuz === 'Semua' || String(s.juz) === tahfidzFilterJuz;
+                          return nameMatches && juzMatches;
+                        }).length === 0 && (
+                          <tr>
+                            <td colSpan={8} className="text-center py-8 text-slate-400 italic text-xxs">
+                              Tidak ada rekaman setoran hafalan yang cocok.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Tahfidz Form Submit */}
+              <div className="lg:col-span-1">
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm sticky top-6 text-slate-850">
+                  <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5 mb-1">
+                    <Award className="w-5 h-5 text-emerald-600 bg-emerald-50 rounded-lg p-0.5" />
+                    Lembar Pengesahan Setoran Tahfidz
+                  </h4>
+                  <p className="text-xxs text-slate-450 mb-4 font-normal">Gunakan kolom ini untuk mengesahkan hafalan setoran baru secara real-time.</p>
+
+                  {tahfidzSuccess && (
+                     <div className="bg-emerald-50 text-emerald-805 border border-emerald-200 p-3 rounded-2xl mb-4 text-xxs font-bold animate-bounce whitespace-normal">
+                       {tahfidzSuccess}
+                     </div>
+                  )}
+
+                  <form onSubmit={handleTahfidzSubmit} className="space-y-3.5">
+                    {/* Santri select */}
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Santri Penguji</label>
+                      <select
+                        value={tahfidzSantriId}
+                        onChange={(e) => setTahfidzSantriId(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
+                        required
+                      >
+                        {allSantri.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.nama} ({s.kelas})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Juz Selection */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Juz Al-Qur'an</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={tahfidzJuz}
+                          onChange={(e) => setTahfidzJuz(Number(e.target.value))}
+                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-emerald-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Kategori Sesi</label>
+                        <select
+                          value={tahfidzTipe}
+                          onChange={(e) => setTahfidzTipe(e.target.value as any)}
+                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
+                          required
+                        >
+                          <option value="Setoran Baru">Setoran Baru</option>
+                          <option value="Murojaah">Murojaah (Mengulang)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Surah Combo Selection & verses */}
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Nama Surah</label>
+                      <select
+                        value={tahfidzSurah}
+                        onChange={(e) => setTahfidzSurah(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white select-none"
+                      >
+                        {[
+                          'An-Naba', 'An-Nazi\'at', 'Abasa', 'At-Takwir', 'Al-Infitar', 'Al-Mutaffifin', 'Al-Inshiqaq', 'Al-Buruj', 'At-Tariq', 'Al-A\'la', 'Al-Ghashiyah', 'Al-Fajr', 'Al-Balad', 'Ash-Shams', 'Al-Layl', 'Ad-Duha', 'Ash-Sharh', 'At-Tin', 'Al-Alaq', 'Al-Qadr', 'Al-Bayyinah', 'Az-Zalzalah', 'Al-Adiyat', 'Al-Qari\'ah', 'At-Takathur', 'Al-Asr', 'Al-Humazah', 'Al-Fil', 'Quraysh', 'Al-Ma\'un', 'Al-Kawthar', 'Al-Kafirun', 'An-Nasr', 'Al-Masad', 'Al-Ikhlas', 'Al-Falaq', 'An-Nas', 'Al-Fatihah', 'Al-Baqarah', 'Yasin', 'Al-Mulk', 'Al-Waqi\'ah', 'Ar-Rahman'
+                        ].map(sur => (
+                          <option key={sur} value={sur}>{sur}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Verses range */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Ayat Mulai</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={tahfidzAyatMulai}
+                          onChange={(e) => setTahfidzAyatMulai(Number(e.target.value))}
+                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-emerald-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Ayat Selesai</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={tahfidzAyatSelesai}
+                          onChange={(e) => setTahfidzAyatSelesai(Number(e.target.value))}
+                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-emerald-500"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quality */}
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Kualitas Kelancaran Setoran</label>
+                      <select
+                        value={tahfidzStatus}
+                        onChange={(e) => setTahfidzStatus(e.target.value as any)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
+                        required
+                      >
+                        <option value="Sangat Lancar">Sangat Lancar (Mumtaz)</option>
+                        <option value="Lancar">Lancar (Jayyid Jiddan)</option>
+                        <option value="Cukup">Cukup Lancar (Jayyid)</option>
+                        <option value="Perlu Mengulang">Perlu Mengulang (Maqbul/Dhoif)</option>
+                      </select>
+                    </div>
+
+                    {/* Guru Select */}
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Ustadz Penyimak</label>
+                      <select
+                        value={tahfidzUstadz}
+                        onChange={(e) => setTahfidzUstadz(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
+                        required
+                      >
+                        {ustadzList.map(u => (
+                          <option key={u.id} value={u.nama}>{u.nama}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Catatan Evaluasi / Makhroj</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Tajwid makhraj bagus, dengung ghunnah dipertahankan..."
+                        value={tahfidzCatatan}
+                        onChange={(e) => setTahfidzCatatan(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-emerald-500 resize-none h-16"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-sm block text-center cursor-pointer"
+                    >
+                      Sahkan Dokumen Setoran Hafalan
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Subtab 4: Nilai Ujian Akademik */}
+          {kelasSubTab === 'akademik' && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in" id="akademik-content-panel">
+              {/* Left Column: Grade history list */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                      <h4 className="font-bold text-slate-801 text-sm flex items-center gap-1.5">
+                        <GraduationCap className="w-5 h-5 text-amber-600" />
+                        Transkrip E-Rapor Akademik & Ujian Santri
+                      </h4>
+                      <p className="text-xxs text-slate-400">Lembar kendali hasil Penilaian Tengah Semester (PTS), Akhir Semester (PAS), dan ujian bulanan resmi.</p>
+                    </div>
+
+                    <span className="text-xxs font-mono text-slate-400 bg-slate-50 px-2.5 py-1 rounded-xl">
+                      {nilaiUjianList.length} Rapor Terbit
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto mt-4">
+                    <table className="w-full text-left text-xs border-collapse font-sans">
+                      <thead>
+                        <tr className="border-b border-slate-100 text-slate-400 font-bold text-[10px] uppercase tracking-wider">
+                          <th className="py-2.5">Santri</th>
+                          <th className="py-2.5">Mata Pelajaran Buku (Kitab)</th>
+                          <th className="py-2.5">Sesi Ujian</th>
+                          <th className="py-2.5 text-center">Skor Akhir (0-100)</th>
+                          <th className="py-2.5">Keterangan Catatan</th>
+                          <th className="py-2.5 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {nilaiUjianList.map((n) => {
+                          const student = allSantri.find(s => s.id === n.santriId);
+                          const ratingLabel = n.nilai >= 85 ? 'Istimewa' : n.nilai >= 75 ? 'Baik' : n.nilai >= 60 ? 'Cukup' : 'Kurang';
+                          const ratingColor = n.nilai >= 85 ? 'text-teal-800 bg-teal-50 border border-teal-150'
+                            : n.nilai >= 75 ? 'text-emerald-800 bg-emerald-50 border border-emerald-150'
+                            : n.nilai >= 60 ? 'text-amber-800 bg-amber-50 border border-amber-150'
+                            : 'text-rose-800 bg-rose-50 border border-rose-150';
+
+                          return (
+                            <tr key={n.id} className="hover:bg-slate-55/60 transition-all text-xxs font-medium text-slate-700">
+                              <td className="py-2.5 font-bold text-slate-800">{student?.nama || 'Santri'}</td>
+                              <td className="py-2.5 font-bold text-amber-900">{n.mataPelajaran}</td>
+                              <td className="py-2.5">
+                                <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[9px] font-mono tracking-wide font-bold uppercase">
+                                  {n.tipeUjian}
+                                </span>
+                              </td>
+                              <td className="py-2.5 text-center">
+                                <span className={`px-2 py-0.5 rounded-lg font-bold font-mono ${ratingColor}`}>
+                                  {n.nilai} — {ratingLabel}
+                                </span>
+                              </td>
+                              <td className="py-2.5 text-slate-450 italic max-w-xs truncate" title={n.catatan}>{n.catatan}</td>
+                              <td className="py-2.5 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => onDeleteNilaiUjian(n.id)}
+                                  className="p-1 text-slate-350 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                  title="Gugurkan Nilai Ujian"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+
+                        {nilaiUjianList.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="text-center py-6 text-slate-400 italic text-xxs">Belum ada nilai ujian terdaftar.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Add Grade Form */}
+              <div className="lg:col-span-1">
+                <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm sticky top-6 text-slate-800">
+                  <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5 mb-1">
+                    <GraduationCap className="w-5 h-5 text-amber-600 bg-amber-50 rounded-lg p-0.5" />
+                    Sahkan Nilai Rapor Akademik
+                  </h4>
+                  <p className="text-xxs text-slate-450 mb-4 font-normal">Sahkan hasil lembar ujian, mid, semester ke dalam buku rapor digital santri.</p>
+
+                  {gradeSuccess && (
+                     <div className="bg-emerald-50 text-emerald-805 border border-emerald-200 p-3 rounded-2xl mb-4 text-xxs font-bold">
+                       {gradeSuccess}
+                     </div>
+                  )}
+
+                  <form onSubmit={handleGradeSubmit} className="space-y-4">
+                    {/* Select Student */}
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Santri</label>
+                      <select
+                        value={gradeSantriId}
+                        onChange={(e) => setGradeSantriId(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
+                        required
+                      >
+                        {allSantri.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.nama} ({s.kelas})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Sesi Ujian */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Tipe Sesi Ujian</label>
+                        <select
+                          value={gradeTipe}
+                          onChange={(e) => setGradeTipe(e.target.value)}
+                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
+                          required
+                        >
+                          <option value="Ujian Tengah Semester">Mid Semester (PTS)</option>
+                          <option value="Ujian Akhir Semester">Ujian Akhir (PAS)</option>
+                          <option value="Ujian Bulanan">Ujian Bulanan (Imtihan)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Pelajaran Ujian</label>
+                        <select
+                          value={gradeSurah}
+                          onChange={(e) => setGradeSurah(e.target.value)}
+                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
+                        >
+                          <option value="">-- Pilih Buku Kitab --</option>
+                          {materiKitabList.map((m) => (
+                            <option key={m.id} value={m.judul}>{m.judul}</option>
+                          ))}
+                          <option value="Bacaan Ghorib & Musyarakat">Bacaan Ghorib & Musyarakat</option>
+                          <option value="Kaidah Ghorib & Tajwid Praktis">Kaidah Ghorib & Tajwid Praktis</option>
+                          <option value="Imla' Khat Arab & Tulis Menulis">Imla' Khat Arab & Tulis Menulis</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Scores */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Skor Tugas (0-100)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="e.g. 85"
+                          value={gradeAyatMulai}
+                          onChange={(e) => setGradeAyatMulai(Number(e.target.value))}
+                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-amber-500"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Skor Ujian (0-100)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="e.g. 90"
+                          value={gradeAyatSelesai}
+                          onChange={(e) => setGradeAyatSelesai(Number(e.target.value))}
+                          className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-amber-500"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Predikat */}
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Hasil Kelulusan Predikat</label>
+                      <select
+                        value={gradeStatus}
+                        onChange={(e) => setGradeStatus(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white"
+                        required
+                      >
+                        <option value="Sangat Lancar">Mumtaz (Istimewa)</option>
+                        <option value="Lancar">Jayyid Jid. (Baik Sekali)</option>
+                        <option value="Cukup">Jayyid (Cukup Baik)</option>
+                        <option value="Perlu Mengulang">Maqbul/Dhoif (Mengulang)</option>
+                      </select>
+                    </div>
+
+                    {/* Catatan Area */}
+                    <div>
+                      <label className="block text-xxs font-bold text-slate-500 uppercase tracking-wider mb-1">Catatan Evaluasi / Rekomendasi</label>
+                      <textarea
+                        rows={2}
+                        placeholder="Naik ke tahap materi berikutnya, thaharah diperbaiki..."
+                        value={gradeCatatan}
+                        onChange={(e) => setGradeCatatan(e.target.value)}
+                        className="w-full text-xs border border-slate-205 rounded-xl px-3 py-2 bg-white outline-none focus:ring-1 focus:ring-amber-500 resize-none h-16"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-sm block text-center cursor-pointer"
+                    >
+                      Sahkan Rapor Nilai Akademik
                     </button>
                   </form>
                 </div>

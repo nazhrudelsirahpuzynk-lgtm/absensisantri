@@ -108,11 +108,25 @@ export default function App() {
     return saved ? JSON.parse(saved) : initialPenilaianJilid;
   });
 
-  // Static datasets (no direct mutations required, but kept in code)
-  const [jadwalPelajaranList] = useState<JadwalPelajaran[]>(initialJadwalPelajaran);
-  const [jadwalNgajiList] = useState<JadwalNgaji[]>(initialJadwalNgaji);
-  const [nilaiUjianList] = useState<NilaiUjian[]>(initialNilaiUjian);
-  const [materiKitabList] = useState<MateriKitab[]>(initialMateriKitab);
+  // Persistent schedule datasets loaded from localStorage if exists
+  const [jadwalPelajaranList, setJadwalPelajaranList] = useState<JadwalPelajaran[]>(() => {
+    const saved = localStorage.getItem('miftah_jadwal_pelajaran_list');
+    return saved ? JSON.parse(saved) : initialJadwalPelajaran;
+  });
+
+  const [jadwalNgajiList, setJadwalNgajiList] = useState<JadwalNgaji[]>(() => {
+    const saved = localStorage.getItem('miftah_jadwal_ngaji_list');
+    return saved ? JSON.parse(saved) : initialJadwalNgaji;
+  });
+
+  const [nilaiUjianList, setNilaiUjianList] = useState<NilaiUjian[]>(() => {
+    const saved = localStorage.getItem('miftah_nilai_ujian_list');
+    return saved ? JSON.parse(saved) : initialNilaiUjian;
+  });
+  const [materiKitabList, setMateriKitabList] = useState<MateriKitab[]>(() => {
+    const saved = localStorage.getItem('miftah_materi_kitab_list');
+    return saved ? JSON.parse(saved) : initialMateriKitab;
+  });
   const [pengumumanList] = useState<PengumumanPondok[]>(initialPengumuman);
 
   // --- 2. Persistance Side Effects ---
@@ -168,7 +182,67 @@ export default function App() {
     localStorage.setItem('miftah_penilaian_jilid_list', JSON.stringify(penilaianJilidList));
   }, [penilaianJilidList]);
 
+  useEffect(() => {
+    localStorage.setItem('miftah_jadwal_pelajaran_list', JSON.stringify(jadwalPelajaranList));
+  }, [jadwalPelajaranList]);
+
+  useEffect(() => {
+    localStorage.setItem('miftah_jadwal_ngaji_list', JSON.stringify(jadwalNgajiList));
+  }, [jadwalNgajiList]);
+
+  useEffect(() => {
+    localStorage.setItem('miftah_nilai_ujian_list', JSON.stringify(nilaiUjianList));
+  }, [nilaiUjianList]);
+
+  useEffect(() => {
+    localStorage.setItem('miftah_materi_kitab_list', JSON.stringify(materiKitabList));
+  }, [materiKitabList]);
+
   // --- 3. Dynamic State Mutation Handlers ---
+
+  const handleAddNilaiUjian = (newNilai: Omit<NilaiUjian, 'id'>) => {
+    const id = `nilai-${Date.now()}`;
+    const entry: NilaiUjian = { ...newNilai, id };
+    
+    setNilaiUjianList(prev => {
+      const existingIdx = prev.findIndex(
+        n => n.santriId === newNilai.santriId && 
+             n.mataPelajaran.toLowerCase() === newNilai.mataPelajaran.toLowerCase() && 
+             n.tipeUjian === newNilai.tipeUjian
+      );
+      if (existingIdx !== -1) {
+        const copy = [...prev];
+        copy[existingIdx] = entry;
+        return copy;
+      }
+      return [entry, ...prev];
+    });
+
+    const targetStudentName = allSantri.find(s => s.id === newNilai.santriId)?.nama || 'Santri';
+    const newNotif: Notifikasi = {
+      id: `notif-nilai-${Date.now()}`,
+      title: 'Rapor Baru Dirilis',
+      content: `Nilai materi [${newNilai.mataPelajaran}] sebesar ${newNilai.nilai} untuk ${targetStudentName} telah disahkan oleh Ustadz.`,
+      date: new Date().toISOString().split('T')[0],
+      type: 'setoran',
+      isRead: false
+    };
+    setNotifikasiList(prev => [newNotif, ...prev]);
+  };
+
+  const handleDeleteNilaiUjian = (id: string) => {
+    setNilaiUjianList(prev => prev.filter(n => n.id !== id));
+  };
+
+  const handleAddMateriKitab = (newMateri: Omit<MateriKitab, 'id'>) => {
+    const id = `mat-${Date.now()}`;
+    const entry: MateriKitab = { ...newMateri, id };
+    setMateriKitabList(prev => [entry, ...prev]);
+  };
+
+  const handleDeleteMateriKitab = (id: string) => {
+    setMateriKitabList(prev => prev.filter(m => m.id !== id));
+  };
 
   // Handle adding new setoran & automatically calculate/advance student's total memorized Juz
   const handleAddSetoran = (newSetoran: Omit<SetoranHafalan, 'id'>) => {
@@ -419,6 +493,22 @@ export default function App() {
     const targetUstadz = ustadzList.find(u => u.id === id);
     setUstadzList(prev => prev.filter(u => u.id !== id));
 
+    // Also update schedules if this ustadz is deleted from the active list!
+    if (targetUstadz) {
+      setJadwalPelajaranList(prev => prev.map(jp => {
+        if (jp.ustadz === targetUstadz.nama) {
+          return { ...jp, ustadz: 'Belum ditentukan' };
+        }
+        return jp;
+      }));
+      setJadwalNgajiList(prev => prev.map(jn => {
+        if (jn.ustadz === targetUstadz.nama) {
+          return { ...jn, ustadz: 'Belum ditentukan' };
+        }
+        return jn;
+      }));
+    }
+
     const newNotif: Notifikasi = {
       id: `notif-del-ust-${Date.now()}`,
       title: 'Ustadz Dihapus',
@@ -428,6 +518,20 @@ export default function App() {
       isRead: false
     };
     setNotifikasiList(prev => [newNotif, ...prev]);
+  };
+
+  // Add a new Jadwal Pelajaran
+  const handleAddJadwalPelajaran = (newJadwal: Omit<JadwalPelajaran, 'id'>) => {
+    const entry: JadwalPelajaran = {
+      ...newJadwal,
+      id: `jp-${Date.now()}`
+    };
+    setJadwalPelajaranList(prev => [...prev, entry]);
+  };
+
+  // Delete a Jadwal Pelajaran
+  const handleDeleteJadwalPelajaran = (id: string) => {
+    setJadwalPelajaranList(prev => prev.filter(jp => jp.id !== id));
   };
 
   // Register new student (santri)
@@ -591,6 +695,8 @@ export default function App() {
                 jadwalPelajaranList={jadwalPelajaranList}
                 ustadzList={ustadzList}
                 penilaianJilidList={penilaianJilidList}
+                nilaiUjianList={nilaiUjianList}
+                materiKitabList={materiKitabList}
                 onAddSetoran={handleAddSetoran}
                 onAddKeuangan={handleAddKeuangan}
                 onUpdateTagihanStatus={handleUpdateTagihanStatus}
@@ -603,6 +709,12 @@ export default function App() {
                 onAddUstadz={handleAddUstadz}
                 onDeleteUstadz={handleDeleteUstadz}
                 onAddPenilaianJilid={handleAddPenilaianJilid}
+                onAddJadwalPelajaran={handleAddJadwalPelajaran}
+                onDeleteJadwalPelajaran={handleDeleteJadwalPelajaran}
+                onAddNilaiUjian={handleAddNilaiUjian}
+                onDeleteNilaiUjian={handleDeleteNilaiUjian}
+                onAddMateriKitab={handleAddMateriKitab}
+                onDeleteMateriKitab={handleDeleteMateriKitab}
               />
             )
           )}

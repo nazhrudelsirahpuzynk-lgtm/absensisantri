@@ -108,20 +108,7 @@ export default function AdminGate({ onSuccess, onCancel }: AdminGateProps) {
           <p className="text-xs text-emerald-200/80 mt-2 font-normal">Area khusus ustadz, pimpinan, dan pengurus pondok pesantren</p>
         </div>
 
-        {/* Info Box detailing Master Credentials as requested by Usability Patterns and Guidance */}
-        {showHelp && (
-          <div className="px-6 pt-6 animate-fadeIn">
-            <div className="bg-[#fffbeb] border border-[#fde68a] rounded-[1.5rem] p-5 flex gap-4 text-[#78350f]">
-              <ShieldAlert className="w-6 h-6 text-[#d97706] shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-extrabold font-sans text-[#78350f]">Kunci Akses Demonstrasi (Demo PIN):</p>
-                <p className="text-xs text-[#92400e] mt-1.5 leading-relaxed">
-                  Gunakan PIN <strong className="bg-[#fef3c7] text-[#78350f] px-2 py-0.5 rounded-lg border border-[#fcd34d] font-bold font-mono text-xs">2525</strong> atau sandi <strong className="bg-[#fef3c7] text-[#78350f] px-2 py-0.5 rounded-lg border border-[#fcd34d] font-bold font-mono text-xs">admin123</strong> untuk masuk.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        
 
         {/* View Switches */}
         <div className="flex px-6 pt-4 border-b border-slate-100">

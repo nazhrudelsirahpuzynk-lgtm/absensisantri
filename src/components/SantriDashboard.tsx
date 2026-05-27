@@ -27,7 +27,9 @@ import {
   MessageSquare,
   ClipboardList,
   CheckSquare,
-  ListFilter
+  ListFilter,
+  Star,
+  Sparkles
 } from 'lucide-react';
 
 interface SantriDashboardProps {
@@ -62,7 +64,100 @@ export default function SantriDashboard({
   onUpdateJurnal
 }: SantriDashboardProps) {
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<'hafalan' | 'ibadah' | 'akademik' | 'notif'>('hafalan');
+  const [activeTab, setActiveTab] = useState<'hafalan' | 'tpa' | 'notif'>('hafalan');
+
+  // Dynamic study calculation based on Ustadz grades
+  const baseSubjects = [
+    { 
+      studi: 'Membaca Al-Qur\'an & Kaidah Ghorib Tajwid', 
+      nilai: 92, 
+      predikat: 'Mumtaz (Istimewa)', 
+      deskripsi: 'Sangat fasih melafalkan ayat Al-Qur’an serta menerapkan hukum nun mati dan mim mati dengan hukum makhraj yang kokoh.',
+      color: 'emerald'
+    },
+    { 
+      studi: 'Hafalan Surat Pendek / Juz \'Amma', 
+      nilai: 88, 
+      predikat: 'Jayyid Jiddan (Sangat Baik)', 
+      deskripsi: 'Kelancaran hafalan sangat baik dari surat An-Nas s.d At-Takatsur tanpa terbata-bata.',
+      color: 'teal'
+    },
+    { 
+      studi: 'Doa-Doa Pilihan & Adab Harian Santri', 
+      nilai: 95, 
+      predikat: 'Mumtaz (Istimewa)', 
+      deskripsi: 'Sanggup melafalkan doa-doa harian lengkap dengan adab keluar masuk masjid, makan, dan berbakti kepada orang tua.',
+      color: 'amber'
+    },
+    { 
+      studi: 'Praktik Gerakan Wudhu & Shalat Fardhu', 
+      nilai: 90, 
+      predikat: 'Mumtaz (Istimewa)', 
+      deskripsi: 'Sempurna mempraktikkan rukun fi`liyah shalat serta tertib meratakan air wudhu sesuai rukun syar’i.',
+      color: 'indigo'
+    },
+    { 
+      studi: 'Dinul Islam (Aqidah Tauhid & Siroh Nabawiyah)', 
+      nilai: 85, 
+      predikat: 'Jayyid (Baik)', 
+      deskripsi: 'Memiliki wawasan yang mantap mengenai silsilah keluarga Nabi Muhammad SAW dan dasar kesopanan akhlaqul karimah.',
+      color: 'blue'
+    }
+  ];
+
+  // Helper to compute predicate string based on score
+  const getPredikatLabel = (score: number) => {
+    if (score >= 90) return 'Mumtaz (Sangat Baik)';
+    if (score >= 80) return 'Jayyid Jiddan (Sangat Baik)';
+    if (score >= 70) return 'Jayyid (Baik)';
+    if (score >= 60) return 'Maqbul (Cukup)';
+    return 'Dhoif (Perlu Mengulang)';
+  };
+
+  const studentGrades = nilaiUjianList.filter(n => n.santriId === santri.id);
+
+  const compiledSubjects = baseSubjects.map(base => {
+    // Look for exact or partial name match in studentGrades
+    const matchedGrade = studentGrades.find(g => 
+      g.mataPelajaran.toLowerCase() === base.studi.toLowerCase() ||
+      base.studi.toLowerCase().includes(g.mataPelajaran.toLowerCase()) ||
+      g.mataPelajaran.toLowerCase().includes(base.studi.toLowerCase())
+    );
+
+    if (matchedGrade) {
+      return {
+        ...base,
+        nilai: matchedGrade.nilai,
+        predikat: getPredikatLabel(matchedGrade.nilai),
+        deskripsi: matchedGrade.catatan || base.deskripsi,
+        fromUstadz: true,
+        tipeUjian: matchedGrade.tipeUjian
+      };
+    }
+    return base;
+  });
+
+  // Now, find any studentGrades whose subjects were NOT matched with the base templates, 
+  // and append them as secondary studies!
+  studentGrades.forEach(g => {
+    const isAlreadyMatched = baseSubjects.some(base => 
+      g.mataPelajaran.toLowerCase() === base.studi.toLowerCase() ||
+      base.studi.toLowerCase().includes(g.mataPelajaran.toLowerCase()) ||
+      g.mataPelajaran.toLowerCase().includes(base.studi.toLowerCase())
+    );
+
+    if (!isAlreadyMatched) {
+      compiledSubjects.push({
+        studi: g.mataPelajaran,
+        nilai: g.nilai,
+        predikat: getPredikatLabel(g.nilai),
+        deskripsi: g.catatan || 'Evaluasi hasil belajar tambahan disahkan oleh Ustadz pengampu.',
+        color: 'indigo',
+        fromUstadz: true,
+        tipeUjian: g.tipeUjian
+      } as any);
+    }
+  });
 
   // Input states for new setoran simulator (self report)
   const [formJuz, setFormJuz] = useState<number>(30);
@@ -210,26 +305,15 @@ export default function SantriDashboard({
           Hasil Belajar Diniyah
         </button>
         <button
-          id="santri-tab-ibadah"
-          onClick={() => setActiveTab('ibadah')}
+          id="santri-tab-tpa"
+          onClick={() => setActiveTab('tpa')}
           className={`flex-1 py-2 text-center rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'ibadah'
+            activeTab === 'tpa'
               ? 'bg-white text-emerald-700 shadow-sm'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          Status Jurnal Ibadah
-        </button>
-        <button
-          id="santri-tab-akademik"
-          onClick={() => setActiveTab('akademik')}
-          className={`flex-1 py-2 text-center rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'akademik'
-              ? 'bg-white text-emerald-700 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Akademik & Kitab
+          Hasil Belajar TPA
         </button>
         <button
           id="santri-tab-notif"
@@ -249,9 +333,7 @@ export default function SantriDashboard({
 
       {/* Tab A: Hafalan */}
       {activeTab === 'hafalan' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left + Middle Col: Hafalan Progress and Setoran Log */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6">
             {/* Automatic Madrasah Diniyah progress bar */}
             <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
               <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 mb-4">
@@ -420,423 +502,158 @@ export default function SantriDashboard({
               )}
             </div>
           </div>
+        )}
 
-          {/* Right Col: Target and Interactive Setoran self reporting form */}
-          <div className="space-y-6">
-            {/* Target Hafalan Box */}
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 mb-4">
-                <Clock className="w-4 h-4 text-emerald-600" />
-                Target Hafalan Mendatang
-              </h3>
-              <div className="space-y-3">
-                {filteredTargets.map(t => (
-                  <div key={t.id} className="p-3.5 rounded-2xl border border-slate-150 bg-slate-50/50">
-                    <div className="flex justify-between items-start mb-1.5">
-                      <div>
-                        <span className="text-xxs font-semibold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-100">
-                          Target {t.tipeTarget}
-                        </span>
-                        <h4 className="font-bold text-slate-800 text-sm mt-1">{t.targetJuz}</h4>
-                      </div>
-                      <span className={`text-xxs font-bold px-2 py-1 rounded ${
-                        t.status === 'Tercapai'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {t.status}
-                      </span>
-                    </div>
-                    <div className="text-xxs font-mono text-slate-400 mt-1">
-                      Batas Waktu: {t.deadline}
-                    </div>
-                  </div>
-                ))}
-                {filteredTargets.length === 0 && (
-                  <p className="text-xs text-slate-450 text-center py-4">Belum ada target terjadwal.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Interactive Form: Target Pelajaran (Self-Simulate) */}
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2 mb-1.5">
-                <Plus className="w-4 h-4 text-emerald-600" />
-                Daftar Mandiri Rencana Pelajaran
-              </h3>
-              <p className="text-xxs text-slate-450 mb-4">Input mata pelajaran & kitab baru yang akan diujikan atau dipresentasikan dalam KBM esok hari.</p>
-
-              {successMsg && (
-                <div className="bg-emerald-50 text-emerald-800 text-xs p-3 rounded-xl mb-4 border border-emerald-250 font-medium">
-                  {successMsg}
-                </div>
-              )}
-
-              <form onSubmit={handleSetoranSubmit} className="space-y-3">
-                <div>
-                  <label htmlFor="form-tipe" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Sifat Belajar</label>
-                  <select
-                    id="form-tipe"
-                    value={formTipe}
-                    onChange={(e) => setFormTipe(e.target.value as any)}
-                    className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-555 focus:border-emerald-555 bg-white"
-                  >
-                    <option value="Setoran Baru">Rencana Presentasi / Setor Kitab</option>
-                    <option value="Murojaah">Persiapan Ulangan Harian</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label htmlFor="form-juz" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Kelas Diniyah</label>
-                    <select
-                      id="form-juz"
-                      value={formJuz}
-                      onChange={(e) => setFormJuz(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-555 bg-white"
-                      required
-                    >
-                      <option value={1}>Kelas 1 Awaliyah</option>
-                      <option value={2}>Kelas 2 Awaliyah</option>
-                      <option value={3}>Kelas 3 Awaliyah</option>
-                      <option value={4}>Kelas 4 Awaliyah</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="form-surah" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Mata Pelajaran</label>
-                    <input
-                      id="form-surah"
-                      type="text"
-                      placeholder="Contoh: Akhlaq, Fiqih"
-                      value={formSurah}
-                      onChange={(e) => setFormSurah(e.target.value)}
-                      className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-555"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label htmlFor="form-ayat-mulai" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Target Mulai Bab/Hal</label>
-                    <input
-                      id="form-ayat-mulai"
-                      type="number"
-                      min={1}
-                      value={formAyatStart}
-                      onChange={(e) => setFormAyatStart(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-555"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="form-ayat-selesai" className="block text-xxs font-bold text-slate-550 uppercase tracking-wider mb-1">Target Selesai Bab/Hal</label>
-                    <input
-                      id="form-ayat-selesai"
-                      type="number"
-                      min={1}
-                      value={formAyatEnd}
-                      onChange={(e) => setFormAyatEnd(Number(e.target.value))}
-                      className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-emerald-555"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <button
-                  id="submit-hafalan-btn"
-                  type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 mt-2 shadow-sm"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Daftarkan Target Belajar</span>
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab B: Jurnal Ibadah (Checklist harian) */}
-      {activeTab === 'ibadah' && (
-        <div className="space-y-6">
-          <div className="bg-emerald-900 rounded-3xl text-white p-6 shadow-sm border border-emerald-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <span className="text-xs text-emerald-300 font-mono">Lembar Kegiatan Harian</span>
-              <h3 className="text-xl font-bold font-sans mt-0.5">Jurnal Ibadah & Amalan Sunnah Santri</h3>
-              <p className="text-xs text-emerald-200 mt-1 max-w-xl">
-                Amalkan dengan ikhlas, istiqomahkan setiap hari, dan laporkan kejujuran perkembangan spiritualmu di hadapan pembimbing.
+      {/* Tab B: Hasil Belajar Taman Pendidikan Al Qur'an (TPA) */}
+      {activeTab === 'tpa' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* TPA Welcome Banner */}
+          <div className="bg-gradient-to-r from-emerald-800 to-teal-850 rounded-3xl text-white p-6 shadow-sm border border-emerald-700/35 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
+            <div className="relative z-10">
+              <span className="text-[10px] font-bold text-amber-300 font-mono tracking-widest uppercase bg-emerald-900/60 px-2.5 py-1 rounded-full border border-emerald-600/30">Laporan Perkembangan Santri</span>
+              <h3 className="text-xl font-bold font-sans mt-2.5 tracking-wide">Hasil Belajar Taman Pendidikan Al-Qur'an (TPA)</h3>
+              <p className="text-xs text-slate-100 mt-1 max-w-2xl leading-normal font-medium">
+                Sistematisasi perkembangan kompetensi membaca Al-Qur'an tartil jilid, kelancaran hafalan juz 'amma, hafalan doa harian beserta adab islamiyah, dan pembiasaan shalat.
               </p>
             </div>
-            <div className="bg-emerald-800/80 px-4 py-2.5 rounded-2xl border border-emerald-700 text-xs font-mono">
-              Tanggal Pelaporan: {todayJurnal.tanggal}
+            <div className="bg-emerald-900/40 shrink-0 px-4 py-3 rounded-2xl border border-emerald-500/20 text-right z-10">
+              <div className="text-[10px] font-mono text-emerald-300 font-semibold uppercase">TAHUN AJARAN / SEMESTER</div>
+              <div className="text-xs font-bold text-amber-300">2025/2026 &bull; Genap</div>
             </div>
+            <div className="absolute -right-16 -top-16 w-48 h-48 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -left-12 -bottom-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Checklist Sholat Jamaah */}
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
-                  <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                    <Sun className="w-4 h-4 text-amber-500" />
-                    Sholat Berjamaah 5 Waktu
-                  </h4>
-                  <span className="text-xxs bg-emerald-50 text-emerald-700 font-semibold px-2 py-0.5 rounded border border-emerald-100">Wajib Jamaah</span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left & Middle: Rapor Capaian & Buku Kendali Jilid */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Rapor Nilai Akademik TPA/TPQ */}
+              <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-5 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-5 h-5 text-amber-500" />
+                    <h3 className="font-bold text-slate-800 text-sm">Lembar Penilaian Keagamaan & Kompetensi TPA</h3>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 font-mono">Batas Lulus (KKM): 75</span>
                 </div>
 
-                <div className="space-y-2.5">
-                  {(Object.keys(todayJurnal.sholatBerjamaah) as Array<'subuh' | 'dhuhur' | 'ashar' | 'maghrib' | 'isya'>).map(waktu => {
-                    const done = todayJurnal.sholatBerjamaah[waktu];
+                <div className="space-y-4">
+                  {compiledSubjects.map((sub: any, idx) => {
+                    const barWidth = `${sub.nilai}%`;
                     return (
-                      <button
-                        key={waktu}
-                        id={`sholat-btn-${waktu}`}
-                        onClick={() => toggleSholat(waktu)}
-                        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-                          done
-                            ? 'bg-emerald-55/65 border-emerald-150 text-emerald-900 font-semibold'
-                            : 'bg-slate-50/50 hover:bg-slate-50 border-slate-100 text-slate-650'
-                        }`}
-                      >
-                        <span className="capitalize text-xs font-medium">Shubuh {waktu === 'subuh' ? ' (Ba\'da Azan)' : waktu}</span>
-                        <div className={`w-5 h-5 rounded-md flex items-center justify-center border font-sans text-xxs font-bold select-none ${
-                          done ? 'bg-emerald-600 border-emerald-700 text-white' : 'border-slate-350 bg-white text-transparent'
-                        }`}>
-                          ✔
+                      <div key={idx} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/25 hover:border-emerald-100 transition-all text-slate-800">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-1.5 mb-2.5">
+                          <div>
+                            <h4 className="font-bold text-slate-800 text-xs sm:text-sm">{sub.studi}</h4>
+                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                              <span className="text-[9px] font-bold text-slate-400 font-mono tracking-wider uppercase">Bidang Evaluasi TPQ</span>
+                              {sub.fromUstadz && (
+                                <span className="text-[8px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-md border border-emerald-200">
+                                  Official &bull; {sub.tipeUjian || 'Penilaian'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xxs font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-lg">{sub.predikat}</span>
+                            <span className="bg-emerald-600 text-white font-mono font-bold text-xs px-2.5 py-1 rounded-xl">{sub.nilai}</span>
+                          </div>
                         </div>
-                      </button>
+
+                        {/* Custom visual progress bar */}
+                        <div className="w-full bg-slate-150 h-2 rounded-full overflow-hidden mb-2">
+                          <div 
+                            className="bg-emerald-600 h-full rounded-full transition-all duration-550"
+                            style={{ width: barWidth }}
+                          />
+                        </div>
+                        <p className="text-xxs text-slate-650 font-medium leading-relaxed italic">{sub.deskripsi}</p>
+                      </div>
                     );
                   })}
                 </div>
               </div>
-              <div className="text-xxs text-slate-450 italic mt-4">
-                *Ketuk tiap kotak sholat jika Anda telah menunaikan sholat wajib berjamaah di masjid.
-              </div>
-            </div>
 
-            {/* Checklist Dzikir & Amalan Sunnah */}
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
-                <h4 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                  <Moon className="w-4 h-4 text-indigo-500" />
-                  Dzikir & Amalan Sunnah
-                </h4>
-                <span className="text-xxs bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded border border-indigo-100">Sunnah Muakkad</span>
-              </div>
+              {/* Buku Perkembangan Bacaan Jilid Harian */}
+              <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <CheckSquare className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-bold text-slate-800 text-sm">Riwayat Buku Kendali Jilid & Tartil TPA</h3>
+                </div>
+                <p className="text-xxs text-slate-450 mb-4 leading-normal">Data bimbingan individual mingguan, verifikasi penyematan kenaikan halaman iqra / Al-Qur'an oleh ustadz pengampu TPA.</p>
+                
+                {penilaianJilidList.filter(pj => pj.santriId === santri.id).length === 0 ? (
+                  <div className="text-center py-8 text-slate-400 text-xs italic">Belum ada riwayat bimbingan berkas jilid/Al-Qur'an tercatat pada profil Anda.</div>
+                ) : (
+                  <div className="space-y-4">
+                    {penilaianJilidList.filter(pj => pj.santriId === santri.id).map(pj => (
+                      <div key={pj.id} className="p-4 rounded-2xl border border-slate-100 hover:border-slate-200 transition-all bg-slate-50/30">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                          <span className="text-xxs font-bold text-emerald-900 bg-emerald-50 border border-emerald-150 px-2.5 py-0.5 rounded-lg self-start uppercase tracking-wide">
+                            {pj.tingkat}
+                          </span>
+                          <span className="text-xxxs font-mono text-slate-400">{pj.tanggal}</span>
+                        </div>
 
-              <div className="space-y-3">
-                {[
-                  { field: 'dzikirPagi', label: 'Dzikir Pagi Ma\'tsurat', icon: '☀️' },
-                  { field: 'dzikirPetang', label: 'Dzikir Petang Ma\'tsurat', icon: '🌙' },
-                  { field: 'sholatTahajud', label: 'Sholat Qiyamul Lail (Tahajud)', icon: '✨' },
-                  { field: 'sholatDhuha', label: 'Sholat Sunnah Dhuha', icon: '🌅' },
-                ].map(item => {
-                  const done = todayJurnal[item.field as 'dzikirPagi' | 'dzikirPetang' | 'sholatTahajud' | 'sholatDhuha'];
-                  return (
-                    <button
-                      key={item.field}
-                      id={`checklist-btn-${item.field}`}
-                      onClick={() => toggleChecklist(item.field as any)}
-                      className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-                        done
-                          ? 'bg-indigo-50/50 border-indigo-200 text-indigo-900 font-semibold'
-                          : 'bg-slate-50/50 hover:bg-slate-100 border-slate-100 text-slate-650'
-                      }`}
-                    >
-                      <span className="text-xs font-medium flex items-center gap-2">
-                        <span>{item.icon}</span>
-                        <span>{item.label}</span>
-                      </span>
-                      <div className={`w-5 h-5 rounded-md flex items-center justify-center border font-sans text-xxs font-bold select-none ${
-                        done ? 'bg-indigo-600 border-indigo-700 text-white' : 'border-slate-350 bg-white text-transparent'
-                      }`}>
-                        ✔
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 border-b border-dashed border-slate-200 pb-2 bg-white/50 p-3 rounded-xl">
+                          <div className="text-xxs text-slate-500">
+                            <strong className="text-slate-400 block font-mono uppercase tracking-wider text-[9px] mb-0.5">Transisi Bacaan:</strong>
+                            <span className="font-bold text-slate-700">Halaman {pj.halamanLama} &rarr; Halaman {pj.halamanBaru}</span>
+                          </div>
+                          <div className="text-xxs text-slate-500">
+                            <strong className="text-slate-400 block font-mono uppercase tracking-wider text-[9px] mb-0.5">Ustadz Penguji:</strong>
+                            <span className="font-bold text-slate-700 text-xxs">{pj.ustadzPenguji}</span>
+                          </div>
+                          <div className="text-xxs text-slate-500">
+                            <strong className="text-emerald-600 block font-mono uppercase tracking-wider text-[9px] mb-0.5">Hafalan Doa Harian:</strong>
+                            <span className="font-semibold text-slate-700">{pj.hafalanDoaHarian}</span>
+                          </div>
+                          <div className="text-xxs text-slate-500">
+                            <strong className="text-emerald-600 block font-mono uppercase tracking-wider text-[9px] mb-0.5">Hafalan Fasholatan:</strong>
+                            <span className="font-semibold text-slate-705">{pj.hafalanFasholatan}</span>
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 bg-amber-50/20 rounded-xl text-xxs text-slate-650 border border-amber-200/40 flex items-start gap-1.5">
+                          <MessageSquare className="w-3.5 h-3.5 text-amber-650 shrink-0 mt-0.5" />
+                          <div>
+                            <strong>Catatan Koreksi Guru TPA:</strong> {pj.catatan}
+                          </div>
+                        </div>
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Tilawah Tracking & Puasa Sunnah */}
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-6">
-              {/* Tilawah tracker */}
-              <div>
-                <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
-                  <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5 uppercase tracking-wide">
-                    📖 Tilawah Harian (Lembar)
-                  </h4>
-                </div>
-                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-center">
-                  <span className="text-xxs font-semibold text-slate-400 block mb-1">Halaman Terbaca</span>
-                  <div className="text-3xl font-bold text-emerald-800 font-sans tracking-tight mb-3">
-                    {todayJurnal.tilawahLembar} <span className="text-xs font-semibold text-slate-500">Lembar</span>
-                  </div>
-                  <div className="flex justify-center space-x-2">
-                    <button
-                      id="tilawah-minus"
-                      onClick={() => updateTilawah(-1)}
-                      className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 p-2 rounded-xl text-xs font-bold w-10 h-10 transition-all select-none"
-                    >
-                      -1
-                    </button>
-                    <button
-                      id="tilawah-plus"
-                      onClick={() => updateTilawah(1)}
-                      className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 p-2 rounded-xl text-xs font-bold w-10 h-10 transition-all select-none"
-                    >
-                      +1
-                    </button>
-                    <button
-                      id="tilawah-plus-5"
-                      onClick={() => updateTilawah(5)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-xl text-xs font-bold px-4 h-10 transition-all inline-flex items-center gap-1"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> +5 Lembar
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Puasa Sunnah dropdown */}
-              <div>
-                <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
-                  <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5 uppercase tracking-wide">
-                    ⭐ Puasa Sunnah
-                  </h4>
-                </div>
-                <select
-                  id="puasa-sunnah-select"
-                  value={todayJurnal.puasaSunnah}
-                  onChange={(e) => updatePuasa(e.target.value as any)}
-                  className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-1 focus:ring-emerald-555 focus:border-emerald-555 bg-white"
-                >
-                  <option value="Tidak Puasa">Tidak Puasa / Hari Biasa</option>
-                  <option value="Puasa Senin">Puasa Sunnah Senin</option>
-                  <option value="Puasa Kamis">Puasa Sunnah Kamis</option>
-                  <option value="Puasa Daud">Puasa Daud</option>
-                  <option value="Puasa Ayyamul Bidh">Puasa Ayyamul Bidh (13,14,15 Hijriah)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tab C: Akademik */}
-      {activeTab === 'akademik' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Jadwal Diniyah & Jadwal Ngaji */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Jadwal Pelajaran Diniyah */}
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <Book className="w-5 h-5 text-emerald-700" />
-                <h3 className="font-bold text-slate-800 text-sm">Jadwal Pelajaran Madrasah Diniyah (MDT)</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-100 text-slate-450 uppercase font-bold tracking-wider">
-                      <th className="py-2.5">Hari</th>
-                      <th className="py-2.5">Jam</th>
-                      <th className="py-2.5">Mata Pelajaran</th>
-                      <th className="py-2.5">Ustadz Penyampai</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 font-medium">
-                    {jadwalPelajaranList.map(j => (
-                      <tr key={j.id} className="hover:bg-slate-50/50">
-                        <td className="py-3 font-semibold text-emerald-800">{j.hari}</td>
-                        <td className="py-3 font-mono text-slate-500">{j.jam}</td>
-                        <td className="py-3 text-slate-800">{j.mataPelajaran}</td>
-                        <td className="py-3 text-slate-500">{j.ustadz}</td>
-                      </tr>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Jadwal Halaqah Mengaji */}
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <Clock className="w-5 h-5 text-teal-700" />
-                <h3 className="font-bold text-slate-800 text-sm">Jadwal Pengajian Kitab & Halaqah Quran</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {jadwalNgajiList.map(j => (
-                  <div key={j.id} className="p-3.5 rounded-2xl border border-slate-100 hover:border-slate-150 transition-all bg-slate-50/40">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-xxs font-mono text-slate-450 bg-slate-100 px-2 py-0.5 rounded">
-                        {j.hari}
-                      </span>
-                      <span className="text-xxs font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-100">
-                        {j.jam}
-                      </span>
-                    </div>
-                    <h4 className="font-bold text-slate-800 text-sm mt-2">{j.kitab}</h4>
-                    <p className="text-xxs text-slate-520 mt-1">Pembimbing: {j.ustadz}</p>
-                    <div className="text-xxs font-mono text-slate-400 mt-2 flex items-center gap-1">
-                      <span>📍 Lokasi:</span> {j.lokasi}
-                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Grades and Kitab kuning */}
-          <div className="space-y-6">
-            {/* Nilai Ujian */}
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-3.5">
-                <Award className="w-5 h-5 text-indigo-700" />
-                <h3 className="font-bold text-slate-800 text-sm">Nilai Hasil Ujian</h3>
-              </div>
-              <div className="space-y-2.5">
-                {filteredNilai.map(n => (
-                  <div key={n.id} className="p-3 rounded-2xl border border-slate-100 bg-slate-50/20 flex justify-between items-center">
-                    <div>
-                      <h4 className="font-bold text-slate-800 text-xs">{n.mataPelajaran}</h4>
-                      <div className="text-xxs text-slate-450 mt-1">Jenis: {n.tipeUjian} &bull; {n.catatan}</div>
-                    </div>
-                    <div className="text-center shrink-0">
-                      <span className={`block w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm border font-mono ${
-                        n.nilai >= 85
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-150'
-                          : 'bg-indigo-50 text-indigo-800 border-indigo-150'
-                      }`}>
-                        {n.nilai}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {filteredNilai.length === 0 && (
-                  <p className="text-xs text-slate-450 text-center py-4">Belum ada nilai ujian terbit.</p>
                 )}
               </div>
             </div>
 
-            {/* Materi Kitab Kuning pegangan */}
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <BookOpen className="w-5 h-5 text-amber-700" />
-                <h3 className="font-bold text-slate-800 text-sm">Materi Kitab Yang Dipelajari</h3>
-              </div>
-              <div className="space-y-3.5">
-                {materiKitabList.map(k => (
-                  <div key={k.id} className="border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-                    <h4 className="font-semibold text-slate-800 text-xs">{k.judul}</h4>
-                    <p className="text-xxs font-mono text-slate-450">{k.pengarang}</p>
-                    <p className="text-xxxs text-slate-500 mt-1 lines-clamp-2">{k.deskripsi}</p>
-                    <div className="mt-1.5 flex items-center justify-between text-xxs bg-amber-50 text-amber-900 border border-amber-100 p-1.5 rounded-lg">
-                      <span>Bab Saat Ini:</span>
-                      <strong className="font-semibold">{k.babAktif}</strong>
-                    </div>
+            {/* Right: TPA Statistics & Self Learner Planner */}
+            <div className="space-y-6">
+              {/* TPA Summary statistics badges */}
+              <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+                <h3 className="font-bold text-slate-800 text-sm mb-4 flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  Rangkuman Sikap & Keaktifan
+                </h3>
+                <div className="space-y-3.5">
+                  <div className="flex justify-between items-center p-2.5 rounded-xl bg-emerald-50/35 border border-emerald-100">
+                    <span className="text-xxs font-medium text-slate-650">Kerajinan Belajar</span>
+                    <span className="text-xs font-bold text-emerald-800 font-mono">Mumtaz (Sangat Rajin)</span>
                   </div>
-                ))}
+                  <div className="flex justify-between items-center p-2.5 rounded-xl bg-teal-50/35 border border-teal-100">
+                    <span className="text-xxs font-medium text-slate-650">Adab & Sopan Santun</span>
+                    <span className="text-xs font-bold text-teal-805 font-mono">Mumtaz (Sangat Sopan)</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2.5 rounded-xl bg-indigo-50/35 border border-indigo-100">
+                    <span className="text-xxs font-medium text-slate-650">Kerapian & Ketertiban</span>
+                    <span className="text-xs font-bold text-indigo-808 font-mono">Jayyid Jiddan (Sesuai Syariat)</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2.5 rounded-xl bg-amber-50/35 border border-amber-100">
+                    <span className="text-xxs font-medium text-slate-650">Kehadiran Kelas TPA</span>
+                    <span className="text-xs font-bold text-amber-805 font-mono">{santri.kehadiranPercent}%</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
